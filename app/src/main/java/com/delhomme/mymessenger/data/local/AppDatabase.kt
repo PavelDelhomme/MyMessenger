@@ -1,20 +1,14 @@
 package com.delhomme.mymessenger.data.local
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Module
-@InstallIn(SingletonComponent::class)
-object DatabaseModule {
-    @Provides
-    @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "messenger_db"
-        ).build()
-    }
+@Database(
+    entities = [MessageEntity::class, ConversationEntity::class],
+    version = 1,
+    exportSchema = false // Ajoute ceci pour enlever le warning
+)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun messageDao(): MessageDao
+    abstract fun conversationDao(): ConversationDao
 }

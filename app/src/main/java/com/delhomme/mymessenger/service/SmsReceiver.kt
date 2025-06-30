@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.delhomme.mymessenger.data.local.AppDatabase
 import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.data.repository.MessageRepository
 
@@ -27,31 +28,5 @@ class SmsReceiver : BroadcastReceiver() {
                 WorkManager.getInstance(context).enqueue(workRequest)
             }
         }
-    }
-}
-
-class SmsSaveWorker(
-    context: Context,
-    workerParams: WorkerParameters
-) : CoroutineWorker(context, workerParams) {
-    override suspend fun doWork(): Result {
-        val address = inputData.getString("address") ?: return Result.failure()
-        val body = inputData.getString("body") ?: return Result.failure()
-
-        val message = MessageEntity(
-            id = System.currentTimeMillis(),
-            conversationId = 0L, // À adapter
-            address = address,
-            body = body,
-            date = System.currentTimeMillis(),
-            isMe = false,
-            type = "sms"
-        )
-
-        // Injecte le repository proprement
-        val repository = MessageRepository(AppDatabase.getDatabase(applicationContext))
-        repository.insertMessages(listOf(message))
-
-        return Result.success()
     }
 }

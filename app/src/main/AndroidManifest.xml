@@ -12,6 +12,7 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
     <application
+        android:name=".MessengerApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -32,7 +33,7 @@
 
 
         <activity
-            android:name=".MainActivity"
+            android:name=".MessengerApp"
             android:exported="true"
             android:theme="@style/Theme.MyMessenger">
             <intent-filter>

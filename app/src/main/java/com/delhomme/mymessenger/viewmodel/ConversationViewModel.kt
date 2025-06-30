@@ -1,34 +1,23 @@
 package com.delhomme.mymessenger.viewmodel
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.repository.ConversationRepository
-import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class ConversationViewModel(
+
+@HiltViewModel
+class ConversationViewModel @Inject constructor(
     private val conversationRepo: ConversationRepository
 ) : ViewModel() {
-    val conversations = conversationRepo.getPagedConversations().cachedIn(viewModelScope)
-
-    // Initiation du chargement des données
-    init {
-        loadConversations()
-    }
-
-    private fun loadConversations() {
-        viewModelScope.launch {
-            conversationRepo.insertConversations(
-                listOf(
-                    ConversationEntity(
-                        id = 1L,
-                        address = "+33612345678",
-                        lastMessage = "Test message",
-                        lastDate = System.currentTimeMillis()
-                    )
-                )
-            )
-        }
-    }
+    val conversations: Flow<PagingData<ConversationEntity>> =
+        Pager(PagingConfig(pageSize = 20)) {
+            conversationRepo.getPagedConversations()
+        }.flow.cachedIn(viewModelScope)
 }
