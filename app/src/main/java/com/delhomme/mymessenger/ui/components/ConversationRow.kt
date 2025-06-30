@@ -6,17 +6,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -36,7 +41,16 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape)
-        )
+        ) {
+            // Icône à l'intérieur de la Box
+            Icon(
+                painter = painterResource(id = R.drawable.ic_person),
+                contentDescription = "Contact",
+                modifier = Modifier.align(Alignment.Center),
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
