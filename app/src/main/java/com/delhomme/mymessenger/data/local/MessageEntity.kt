@@ -11,5 +11,6 @@ data class MessageEntity(
     val body: String,
     val date: Long,
     val isMe: Boolean,
-    val type: String // "sms" ou "mms"
+    val type: String, // "sms" ou "mms"
+    val status: String = "DELIVERED"
 )

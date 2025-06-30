@@ -37,6 +37,7 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(8.dp)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         AsyncImage(
             model = conversation.photoUri,
@@ -55,7 +56,8 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
                 text = conversation.fullName.ifBlank { conversation.phoneNumber },
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = conversation.lastMessage,

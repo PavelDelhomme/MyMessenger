@@ -1,12 +1,16 @@
 package com.delhomme.mymessenger.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,38 +24,75 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
+import com.delhomme.mymessenger.utils.formatMessageDate
 
 @Composable
-fun MessageBubble(message: MessageEntity) {
+fun MessageBubble(
+    message: MessageEntity,
+    onLongClick: () -> Unit
+) {
+    val isMe = message.isMe
+    val bubbleColor = if (isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
+
+    // Couleur selon le statut
+    val statusColor = when(message.status) {
+        "SENDING" -> Color.Yellow
+        "SENT" -> Color.Green
+        "FAILED" -> Color.Red
+        else -> textColor.copy(alpha = 0.7f)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = if (message.isMe) Arrangement.End else Arrangement.Start
+            .padding(vertical = 4.dp),
+        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
     ) {
         Box(
             modifier = Modifier
-                .width(200.dp)
-                .height(60.dp)
+                .widthIn(max = 280.dp)
+                .clickable { onLongClick() }
         ) {
             Surface(
-                color = if (message.isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(16.dp),
+                color = bubbleColor,
+                shape = RoundedCornerShape(
+                    topStart = if (isMe) 16.dp else 4.dp,
+                    topEnd = 16.dp,
+                    bottomStart = 16.dp,
+                    bottomEnd = if (isMe) 4.dp else 16.dp
+                ),
                 tonalElevation = 2.dp
             ) {
-                Text(
-                    text = message.body,
-                    modifier = Modifier.padding(12.dp),
-                    color = if (message.isMe) Color.White else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            // Ajoute une icône d'envoi pour les messages non envoyés
-            if (!message.isMe) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_send),
-                    contentDescription = "Envoyer",
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                )
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = message.body,
+                        color = textColor
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatMessageDate(message.date),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        if (isMe) {
+                            Icon(
+                                painter = painterResource(
+                                    when(message.status) {
+                                        "SENDING" -> R.drawable.ic_clock
+                                        "SENT" -> R.drawable.ic_check
+                                        "FAILED" -> R.drawable.ic_error
+                                        else -> R.drawable.ic_clock
+                                    }
+                                ),
+                                contentDescription = "Status",
+                                tint = statusColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

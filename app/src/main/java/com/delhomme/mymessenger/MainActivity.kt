@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.delhomme.mymessenger.ui.components.RequestSmsPermissions
 import com.delhomme.mymessenger.ui.navigation.AppNavigation
 import com.delhomme.mymessenger.ui.theme.MyMessengerTheme
@@ -15,7 +16,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyMessengerTheme {
+            MyMessengerTheme(darkTheme = isSystemInDarkTheme()) {
                 RequestSmsPermissions {
                     AppNavigation()
                 }

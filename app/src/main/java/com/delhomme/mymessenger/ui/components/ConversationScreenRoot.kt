@@ -14,17 +14,17 @@ import com.delhomme.mymessenger.ui.screen.ConversationListScreen
 
 @Composable
 fun ConversationRoot(navController: NavController) {
-    val navController = rememberNavController()
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("newConversation") }) {
-                Icon(Icons.Default.Add, null)
+                Icon(Icons.Default.Add, contentDescription = "Add conversation")
             }
         }
     ) { padding ->
         ConversationListScreen(
-            onConversationClick = { id -> navController.navigate("messages/$id") },
-            modifier = Modifier.padding(padding)
+            onConversationClick = { convId -> navController.navigate("messages/$convId") },
+            onAddClick = { navController.navigate("newConversation") }, // Ajouté
+            modifier = Modifier.padding(padding) // Correction
         )
     }
 }

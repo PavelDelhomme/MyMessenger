@@ -11,4 +11,8 @@ class MessageRepository(private val db: AppDatabase) {
     suspend fun insertMessages(messages: List<MessageEntity>) {
         db.messageDao().insertMessages(messages)
     }
+
+    suspend fun updateMessageStatus(id: Long, status: String) {
+        db.messageDao().updateMessageStatus(id, status)
+    }
 }

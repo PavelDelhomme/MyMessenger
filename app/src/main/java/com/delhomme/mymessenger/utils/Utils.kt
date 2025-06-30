@@ -44,24 +44,32 @@ private var contactsCache: List<Pair<String, String>>? = null
 
 
 fun getAllContacts(context: Context): List<Pair<String, String>> {
-    if (contactsCache != null) return contactsCache!!
+    contactsCache?.let { return it }
 
-    val list = mutableListOf<Pair<String, String>>()
     val cursor = context.contentResolver.query(
         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
         arrayOf(
             ContactsContract.CommonDataKinds.Phone.NUMBER,
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
         ),
-        null, null, null
-    )
+        null, null, "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} COLLATE NOCASE ASC"
+    ) ?: return emptyList()
 
-    cursor?.use {
-        while (it.moveToNext()) {
-            list += it.getString(0) to it.getString(1)
+    return try {
+        buildList {
+            while (cursor.moveToNext()) {
+                val number = cursor.getString(0)?.trim() ?: ""
+                val name = cursor.getString(1)?.trim() ?: ""
+
+                // Filtrage des entrées vides
+                if (number.isNotBlank() && name.isNotBlank()) {
+                    add(number to name)
+                }
+            }
+        }.distinctBy { it.first }.also {
+            contactsCache = it // Mise en cache
         }
+    } finally {
+        cursor.close()
     }
-
-    contactsCache = list.distinctBy { it.first }
-    return contactsCache!!
 }
