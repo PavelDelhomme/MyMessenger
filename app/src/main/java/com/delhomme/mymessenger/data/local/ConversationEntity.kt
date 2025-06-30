@@ -10,5 +10,10 @@ data class ConversationEntity(
     val address: String,
     val lastMessage: String,
     val lastDate: Long,
-    val archived: Boolean = false
+    val archived: Boolean = false,
+    val numberOfMessages: Int,
+    var fullName: String,
+    var phoneNumber: String,
+    val displayName: String = "",
+    val photoUri: String? = null // avatar eventuel
 )

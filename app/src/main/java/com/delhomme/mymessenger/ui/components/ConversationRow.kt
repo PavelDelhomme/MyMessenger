@@ -18,9 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import java.text.SimpleDateFormat
@@ -36,25 +38,21 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(8.dp)
     ) {
-        // Avatar minimaliste
-        Box(
+        AsyncImage(
+            model = conversation.photoUri,
+            contentDescription = null,
             modifier = Modifier
                 .size(44.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
-        ) {
-            // Icône à l'intérieur de la Box
-            Icon(
-                painter = painterResource(id = R.drawable.ic_person),
-                contentDescription = "Contact",
-                modifier = Modifier.align(Alignment.Center),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
-        }
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            fallback = painterResource(R.drawable.ic_person),
+            error    = painterResource(R.drawable.ic_person)
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = conversation.address,
+                text = conversation.fullName.ifBlank { conversation.phoneNumber },
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

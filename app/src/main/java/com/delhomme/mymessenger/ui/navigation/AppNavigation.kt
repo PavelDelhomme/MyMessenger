@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.delhomme.mymessenger.ui.screen.ConversationListScreen
 import com.delhomme.mymessenger.ui.screen.MessageListScreen
+import com.delhomme.mymessenger.ui.screen.NewConversationScreen
 
 @Composable
 fun AppNavigation() {
@@ -26,5 +27,6 @@ fun AppNavigation() {
             val convId = backStackEntry.arguments?.getString("conversationId")?.toLongOrNull() ?: 0L
             MessageListScreen(conversationId = convId)
         }
+        composable("newConversation") { NewConversationScreen(navController) }
     }
 }

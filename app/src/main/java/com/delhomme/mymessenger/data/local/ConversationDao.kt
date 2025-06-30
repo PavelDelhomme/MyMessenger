@@ -14,4 +14,15 @@ interface ConversationDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversations(conversations: List<ConversationEntity>)
+
+    @Query("""
+        SELECT * FROM conversations
+        WHERE fullName LIKE '%' || :q || '%'
+            OR phoneNumber LIKE '%' || :q || '%'
+        ORDER BY lastDate DESC
+    """)
+    fun searchConversations(q: String): PagingSource<Int, ConversationEntity>
+    @Query("SELECT COUNT(*) FROM messages WHERE conversationId = :id")
+    suspend fun countMessages(id: Long): Int
+
 }

@@ -8,4 +8,8 @@ class ConversationRepository(private val db: AppDatabase) {
     fun getPagedConversations(): PagingSource<Int, ConversationEntity> {
         return db.conversationDao().getAllConversationsPaging()
     }
+    fun pagedConversations(query: String) =
+        if (query.isBlank()) db.conversationDao().getAllConversationsPaging()
+        else db.conversationDao().searchConversations(query)
+
 }

@@ -8,16 +8,29 @@ import androidx.paging.cachedIn
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.repository.ConversationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 
 @HiltViewModel
 class ConversationViewModel @Inject constructor(
-    private val conversationRepo: ConversationRepository
+    private val repo: ConversationRepository
 ) : ViewModel() {
-    val conversations: Flow<PagingData<ConversationEntity>> =
-        Pager(PagingConfig(pageSize = 20)) {
-            conversationRepo.getPagedConversations()
-        }.flow.cachedIn(viewModelScope)
+    private val _search = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _search
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val conversations: Flow<PagingData<ConversationEntity>> = _search
+        .flatMapLatest { q ->
+            Pager(PagingConfig(pageSize = 20)) {
+                repo.pagedConversations(q)
+            }.flow
+        }
+        .cachedIn(viewModelScope)
+
+    fun updateQuery(q: String) { _search.value = q }
 }
