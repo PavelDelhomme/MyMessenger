@@ -1,5 +1,5 @@
 package com.delhomme.mymessenger.viewmodel
-import android.content.Context
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -10,7 +10,6 @@ import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.data.repository.MessageRepository
 import com.delhomme.mymessenger.data.repository.SmsSender
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,7 +18,6 @@ import javax.inject.Inject
 class MessageViewModel @Inject constructor(
     private val messageRepo: MessageRepository,
     private val smsSender: SmsSender,
-    @ApplicationContext private val context: Context // Injection correcte du contexte
 ) : ViewModel() {
     fun getMessages(conversationId: Long): Flow<PagingData<MessageEntity>> {
         return Pager(PagingConfig(pageSize = 50)) {
@@ -38,7 +36,7 @@ class MessageViewModel @Inject constructor(
                 date = System.currentTimeMillis(),
                 isMe = true,
                 type = "sms",
-                status = "SENDING" // Nouveau champ
+                status = "SENDING"
             )
 
             // Insérer dans la base
@@ -46,7 +44,7 @@ class MessageViewModel @Inject constructor(
 
             try {
                 // Envoyer le SMS (remplacer par le vrai numéro)
-                smsSender.sendSms(context, "DESTINATAIRE", text)
+                smsSender.sendSms("DESTINATAIRE", text)
                 // Mettre à jour le statut
                 messageRepo.updateMessageStatus(message.id, "SENT")
             } catch (e: Exception) {

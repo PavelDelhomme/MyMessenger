@@ -51,7 +51,6 @@ import com.delhomme.mymessenger.ui.components.MessageBubble
 import com.delhomme.mymessenger.utils.formatMessageDate
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
 import kotlinx.coroutines.launch
-import androidx.paging.compose.items
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -170,10 +169,13 @@ fun MessageListScreen(
             reverseLayout = true,
             state = scrollState
         ) {
-            items(
-                items = messages,
-                key = { message -> message.id } // Clé unique pour chaque message
-            ) { message ->
+            items(                             // <-- overload standard de LazyListScope
+                count = messages.itemCount,    // nombre d’éléments
+                key = { index ->               // clé stable (facultatif mais recommandé)
+                    messages[index]?.id ?: index
+                }
+            ) { index ->
+                val message = messages[index]
                 if (message != null) {
                     MessageBubble(
                         message = message,

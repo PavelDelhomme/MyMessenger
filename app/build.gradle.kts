@@ -18,7 +18,26 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            /*annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/schemas".toString(),
+                    "room.incremental" to "true",
+                    "room.expandProjection" to "true"
+                )
+            }*/
+        }
     }
+
+    // ✅ Bloc Kotlin DSL correct pour l’argument KSP
+    /*ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }*/
+
+    // ✅ Ajouter le dossier de schéma aux assets de tests
+    //sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
+
 
     buildTypes {
         release {
@@ -33,6 +52,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+
     kotlinOptions {
         jvmTarget = "11"
     }
