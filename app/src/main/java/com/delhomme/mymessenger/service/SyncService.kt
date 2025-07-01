@@ -39,13 +39,6 @@ class SyncService : JobService() {
         return true
     }
 
-    @Companion object {
-        fun syncMessages(context: Context) {
-            val workRequest = OneTimeWorkRequestBuilder<SmsSyncWorker>()
-                .build()
-            WorkManager.getInstance(context).enqueue(workRequest)
-        }
-    }
 
     override fun onStopJob(params: JobParameters?): Boolean {
         return true

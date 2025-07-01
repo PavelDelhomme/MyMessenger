@@ -2,6 +2,7 @@ package com.delhomme.mymessenger.utils
 
 import android.content.Context
 import android.net.Uri
+import androidx.work.CoroutineWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.delhomme.mymessenger.data.local.MessageEntity
@@ -13,9 +14,9 @@ class SmsSyncWorker @Inject constructor(
     @ApplicationContext private val context: Context,
     private val messageRepository: MessageRepository,
     workerParams: WorkerParameters
-) : Worker(context, workerParams) {
+) : CoroutineWorker(context, workerParams) { // Changé en CoroutineWorker
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result { // Maintenant suspend
         val smsList = context.contentResolver.query(
             Uri.parse("content://sms/"),
             null,
@@ -34,7 +35,7 @@ class SmsSyncWorker @Inject constructor(
                 smsList.add(
                     MessageEntity(
                         id = id,
-                        conversationId = 0, // À remplacer par l'ID réel
+                        conversationId = 0, // Remplacer par l'ID réel plus tard
                         address = address,
                         body = body,
                         date = date,
@@ -47,6 +48,7 @@ class SmsSyncWorker @Inject constructor(
         }
 
         if (smsList != null) {
+            // Appel suspendu dans un contexte suspendu
             messageRepository.insertMessages(smsList)
         }
         return Result.success()

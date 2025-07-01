@@ -71,7 +71,7 @@ class ConversationViewModel @Inject constructor(
         repo.archiveConversation(id)
     }
 
-    fun unarchiveConversation(id: Long) {
+    suspend fun unarchiveConversation(id: Long) {
         repo.unarchiveConversation(id)
     }
 
