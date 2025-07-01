@@ -6,27 +6,36 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.local.MessageEntity
+import com.delhomme.mymessenger.data.repository.ConversationRepository
 import com.delhomme.mymessenger.data.repository.MessageRepository
 import com.delhomme.mymessenger.data.repository.SmsSender
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MessageViewModel @Inject constructor(
-    private val messageRepo: MessageRepository,
+    private val repo: MessageRepository,
     private val smsSender: SmsSender,
+    private val conversationRepo: ConversationRepository
 ) : ViewModel() {
     fun getMessages(conversationId: Long): Flow<PagingData<MessageEntity>> {
-        return Pager(PagingConfig(pageSize = 50)) {
-            messageRepo.getPagedMessages(conversationId)
+        return Pager(
+            config = PagingConfig(
+                pageSize = 30,
+                enablePlaceholders = false
+            )
+        ) {
+            repo.getMessagesByConversationPaging(conversationId)
         }.flow.cachedIn(viewModelScope)
     }
 
-    fun sendMessage(conversationId: Long, text: String) {
-        viewModelScope.launch {
+    fun sendMessage(conversationId: Long, text: String, phoneNumber: String) {
+        viewModelScope.launch(Dispatchers.IO) {
             // Créer le message local
             val message = MessageEntity(
                 id = System.currentTimeMillis(),
@@ -40,17 +49,21 @@ class MessageViewModel @Inject constructor(
             )
 
             // Insérer dans la base
-            messageRepo.insertMessages(listOf(message))
+            repo.insertMessages(listOf(message))
 
-            try {
-                // Envoyer le SMS (remplacer par le vrai numéro)
-                smsSender.sendSms("DESTINATAIRE", text)
-                // Mettre à jour le statut
-                messageRepo.updateMessageStatus(message.id, "SENT")
-            } catch (e: Exception) {
-                // En cas d'erreur
-                messageRepo.updateMessageStatus(message.id, "FAILED")
-            }
+            // Mettre à jour la conversation
+            conversationRepo.updateConversationLastMessage(
+                conversationId = conversationId,
+                lastMessage = text,
+                lastDate = System.currentTimeMillis()
+            )
+
+            // Envoi réel du SMS (en arrière-plan)
+            smsSender.sendSms(phoneNumber, text)
         }
+    }
+
+    suspend fun getConversation(conversationId: Long): ConversationEntity? {
+        return conversationRepo.getConversationById(conversationId)
     }
 }

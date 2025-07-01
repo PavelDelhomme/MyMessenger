@@ -33,4 +33,21 @@ class ConversationViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     fun updateQuery(q: String) { _search.value = q }
+
+    suspend fun createConversationIfNeeded(phoneNumber: String, fullName: String) {
+        if (repo.getConversationByPhone(phoneNumber) == null) {
+            val newId = phoneNumber.hashCode().toLong()
+            val newConversation = ConversationEntity(
+                id = newId,
+                phoneNumber = phoneNumber,
+                fullName = fullName
+            )
+            repo.insertConversation(newConversation)
+        }
+    }
+
+    suspend fun cleanEmptyConversations() {
+        val emptyConvs = repo.getEmptyConversations()
+        repo.deleteConversations(emptyConvs)
+    }
 }

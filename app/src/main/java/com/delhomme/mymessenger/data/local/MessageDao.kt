@@ -1,5 +1,6 @@
 package com.delhomme.mymessenger.data.local
 
+import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
@@ -17,4 +18,11 @@ interface MessageDao {
 
     @Query("UPDATE messages SET status = :status WHERE id = :id")
     suspend fun updateMessageStatus(id: Long, status: String)
+
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY date DESC")
+    fun getMessagesByConversationPaging(conversationId: Long): PagingSource<Int, MessageEntity>
+
+    @Query("SELECT * FROM messages WHERE body = :content AND address = :address LIMIT 1")
+    suspend fun getMessageByContent(content: String, address: String): MessageEntity?
+
 }

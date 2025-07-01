@@ -25,6 +25,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String = "Rechercher...",
+    drawerComponent: DrawerComponent? = null,
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,25 +20,45 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.delhomme.mymessenger.ui.components.SearchBar
+import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.getAllContacts
+import com.delhomme.mymessenger.viewmodel.ConversationViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewConversationScreen(nav: NavController) {
+    val viewModel: ConversationViewModel = hiltViewModel()
+    val scope = rememberCoroutineScope()
+
+    // Gestion de la suppression des conversations vides
+    DisposableEffect(Unit) {
+        onDispose {
+            scope.launch {
+                viewModel.cleanEmptyConversations()
+            }
+        }
+    }
+
     val context = LocalContext.current
     val contactsState = remember { mutableStateOf(emptyList<Pair<String, String>>()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -75,7 +94,9 @@ fun NewConversationScreen(nav: NavController) {
             TopAppBar(
                 title = { Text("Sélectionner un contact") },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = {
+                        nav.popBackStack() // Retour à l'écran précédent
+                    }) {
                         Icon(Icons.Filled.ArrowBack, "Retour")
                     }
                 },
@@ -114,12 +135,34 @@ fun NewConversationScreen(nav: NavController) {
                 ) {
                     items(filteredContacts, key = { it.first }) { contact ->
                         val (number, name) = contact
+                        val formattedNumber = formatFrenchPhoneNumber(number)
+
                         ListItem(
-                            headlineContent = { Text(name) },
-                            supportingContent = { Text(number) },
+                            headlineContent = {
+                                Text(
+                                    text = if (name.isBlank()) "Envoyer un SMS à $formattedNumber"
+                                    else name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    text = formattedNumber,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
                             modifier = Modifier
                                 .clickable {
-                                    nav.navigate("messages/${number.hashCode()}?addr=$number")
+                                    // Créer la conversation avant la navigation
+                                    scope.launch {
+                                        viewModel.createConversationIfNeeded(
+                                            phoneNumber = number,
+                                            fullName = name
+                                        )
+                                        nav.navigate("messages/${number.hashCode().toLong()}?name=${URLEncoder.encode(name, "UTF-8")}&addr=$number")
+                                    }
                                 }
                                 .padding(8.dp)
                         )

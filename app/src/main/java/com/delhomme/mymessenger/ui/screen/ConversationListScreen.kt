@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.delhomme.mymessenger.ui.components.ConversationRow
+import com.delhomme.mymessenger.ui.components.DrawerComponent
 import com.delhomme.mymessenger.ui.components.SearchBar
 import com.delhomme.mymessenger.viewmodel.ConversationViewModel
 
@@ -48,7 +49,7 @@ fun ConversationListScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding())
                 .fillMaxSize()
                 .systemBarsPadding()
         ) {
@@ -59,7 +60,8 @@ fun ConversationListScreen(
                     viewModel.updateQuery(it)
                 },
                 placeholder = "Rechercher des conversations...",
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(bottom = 2.dp, top = 2.dp),
+                drawerComponent = DrawerComponent()
             )
 
             LazyColumn {

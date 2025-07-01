@@ -37,31 +37,38 @@ class SmsSaveWorker(
 
         val convId = address.hashCode().toLong()
 
-        val message = MessageEntity(
-            id = System.currentTimeMillis(),
-            conversationId = convId,
-            address = address,
-            body = body,
-            date = System.currentTimeMillis(),
-            isMe = false,
-            type = "sms"
-        )
-        msgDao.insertMessages(listOf(message))
+        // Vérifier si le message existe déjà
+        val existingMessage = msgDao.getMessageByContent(body, address)
+        if (existingMessage != null) {
+            val message = MessageEntity(
+                id = System.currentTimeMillis(),
+                conversationId = convId,
+                address = address,
+                body = body,
+                date = System.currentTimeMillis(),
+                isMe = false,
+                type = "sms",
+                status = "DELIVERED"
+            )
+            msgDao.insertMessages(listOf(message))
+        }
 
-        val oldCount = convDao.countMessages(convId)   // ajoute une fonction @Query COUNT
-        val conv = ConversationEntity(
+        // Mettre à jour la conversation
+        val conversation = convDao.getConversationByPhone(address) ?: ConversationEntity(
             id = convId,
-            address = address,
-            fullName = name,
             phoneNumber = address,
-            photoUri = photo,
-            numberOfMessages = oldCount + 1,
+            fullName = name ?: address,
             lastMessage = body,
-            lastDate = System.currentTimeMillis()
-        )
-        convDao.insertConversations(listOf(conv))
+            lastDate = System.currentTimeMillis(),
+            numberOfMessages = 1,
+            photoUri = photo
+        ).apply {
+            convDao.insertConversations(listOf(this))
+        }
 
-        showIncomingNotification(applicationContext, convId, name, body)
+        // Notification
+        showIncomingNotification(applicationContext, convId, name ?: address, body)
+
         return Result.success()
     }
 }

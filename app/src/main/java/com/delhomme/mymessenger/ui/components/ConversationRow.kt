@@ -19,10 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.transform.CircleCropTransformation
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import java.text.SimpleDateFormat
@@ -39,15 +41,30 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
             .padding(8.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
+        /*AsyncImage(
+            model = conversation.photoUri,
+            contentDescription = null,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.ic_person),
+            error    = painterResource(R.drawable.ic_person),
+            transformation = CircleCropTransformation(), // Réduire la consommation mémoire
+            onError = { /* Gérer les erreurs silencieusement */ },
+            onLoading = { /* Afficher un indicateur */ }
+        )*/
         AsyncImage(
             model = conversation.photoUri,
             contentDescription = null,
             modifier = Modifier
                 .size(44.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
-            fallback = painterResource(R.drawable.ic_person),
-            error    = painterResource(R.drawable.ic_person)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.ic_person),
+            error = painterResource(R.drawable.ic_error),
+            onError = { /* Gérer les erreurs silencieusement */ },
+            onLoading = { /* Afficher un indicateur */ }
         )
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -71,7 +88,8 @@ fun ConversationRow(conversation: ConversationEntity, onClick: () -> Unit) {
         // Date minimaliste
         Text(
             text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(conversation.lastDate)),
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = 8.dp)
         )
     }
 }

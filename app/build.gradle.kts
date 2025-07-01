@@ -60,6 +60,10 @@ android {
     buildFeatures {
         compose = true
     }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.3"
+    }
 }
 
 dependencies {
@@ -87,6 +91,8 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    implementation(libs.accompanist.permissions)
 
     // Tests
     testImplementation(libs.junit)

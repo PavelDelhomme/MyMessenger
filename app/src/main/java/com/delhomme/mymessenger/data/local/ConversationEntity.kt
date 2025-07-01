@@ -7,13 +7,11 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "conversations")
 data class ConversationEntity(
     @PrimaryKey val id: Long,
-    val address: String,
-    val lastMessage: String,
-    val lastDate: Long,
-    val archived: Boolean = false,
-    val numberOfMessages: Int,
+    val phoneNumber: String,
     var fullName: String,
-    var phoneNumber: String,
-    val displayName: String = "",
-    val photoUri: String? = null // avatar eventuel
+    val lastMessage: String = "",
+    val lastDate: Long = System.currentTimeMillis(),
+    val archived: Boolean = false,
+    val numberOfMessages: Int = 0,
+    val photoUri: String? = null
 )

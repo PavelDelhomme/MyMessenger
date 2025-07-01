@@ -73,3 +73,14 @@ fun getAllContacts(context: Context): List<Pair<String, String>> {
         cursor.close()
     }
 }
+
+
+
+fun formatFrenchPhoneNumber(number: String): String {
+    val digits = number.filter { it.isDigit() }
+    return when {
+        digits.length == 10 && digits.startsWith('0') ->
+            digits.chunked(2).joinToString(" ")
+        else -> number
+    }
+}

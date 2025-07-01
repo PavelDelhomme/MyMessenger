@@ -1,5 +1,6 @@
 package com.delhomme.mymessenger.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,9 +36,23 @@ fun MessageBubble(
     message: MessageEntity,
     onLongClick: () -> Unit
 ) {
+    // Logging avec LaunchedEffect
+    LaunchedEffect(message) {
+        Log.d("MessageBubble", "Message: ${message.body}")
+        Log.d("MessageBubble", "Status: ${message.status}")
+
+        val logStatusColor = when(message.status) {
+            "SENDING" -> "Yellow"
+            "SENT" -> "Green"
+            "FAILED" -> "Red"
+            else -> "Default"
+        }
+        Log.d("MessageBubble", "Color: $logStatusColor")
+    }
+
     val isMe = message.isMe
     val bubbleColor = if (isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
+    val textColor = if (isMe) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
     // Couleur selon le statut
     val statusColor = when(message.status) {
