@@ -1,19 +1,25 @@
 package com.delhomme.mymessenger.ui.components
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.delhomme.mymessenger.ui.screen.ConversationListScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun ConversationRoot(navController: NavController) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("newConversation") }) {
@@ -24,7 +30,8 @@ fun ConversationRoot(navController: NavController) {
         ConversationListScreen(
             onConversationClick = { convId -> navController.navigate("messages/$convId") },
             onAddClick = { navController.navigate("newConversation") }, // Ajouté
-            modifier = Modifier.padding(padding) // Correction
+            onMenuClick = { scope.launch { drawerState.open() } },
+            navController = navController
         )
     }
 }

@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.compose.material)
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)

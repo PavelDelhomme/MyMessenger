@@ -75,12 +75,13 @@ fun getAllContacts(context: Context): List<Pair<String, String>> {
 }
 
 
-
 fun formatFrenchPhoneNumber(number: String): String {
     val digits = number.filter { it.isDigit() }
     return when {
         digits.length == 10 && digits.startsWith('0') ->
-            digits.chunked(2).joinToString(" ")
+            "${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 6)} ${digits.substring(6, 8)} ${digits.substring(8, 10)}"
+        digits.length == 9 && digits.startsWith('1') ->
+            "${digits.substring(0, 1)} ${digits.substring(1, 3)} ${digits.substring(3, 5)} ${digits.substring(5, 7)} ${digits.substring(7, 9)}"
         else -> number
     }
 }

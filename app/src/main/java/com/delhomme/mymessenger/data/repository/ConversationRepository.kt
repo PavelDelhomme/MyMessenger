@@ -149,4 +149,57 @@ class ConversationRepository(private val db: AppDatabase) {
         val date: Long,
         val type: Int // 1=received, 2=sent
     )
+
+
+    suspend fun getArchivedConversations(): List<ConversationEntity> {
+        return db.conversationDao().getArchivedConversations()
+    }
+
+    suspend fun getPinnedConversations(): List<ConversationEntity> {
+        return db.conversationDao().getAllConversations().filter { it.isPinned }
+    }
+    suspend fun getBlockedConversations(): List<ConversationEntity> {
+        return db.conversationDao().getAllConversations().filter { it.isBlocked }
+    }
+
+    suspend fun archiveConversation(id: Long) {
+        db.conversationDao().updateConversationArchived(id, true)
+    }
+
+    suspend fun unarchiveConversation(id: Long) {
+        db.conversationDao().updateConversationArchived(id, false)
+    }
+
+    suspend fun deleteConversation(id: Long) {
+        db.conversationDao().deleteConversationById(id)
+    }
+
+    suspend fun getMutedConversations(): List<ConversationEntity> {
+        return db.conversationDao().getAllConversations().filter { it.isMuted }
+    }
+
+    suspend fun blockConversation(id: Long) {
+        db.conversationDao().updateConversationBlocked(id, true)
+    }
+
+    suspend fun unblockConversation(id: Long) {
+        db.conversationDao().updateConversationBlocked(id, false)
+    }
+
+    suspend fun pinConversation(id: Long) {
+        db.conversationDao().updateConversationPinned(id, true)
+    }
+
+    suspend fun unpinConversation(id: Long) {
+        db.conversationDao().updateConversationPinned(id, false)
+    }
+
+    suspend fun muteConversation(id: Long) {
+        db.conversationDao().updateConversationMuted(id, true)
+    }
+
+    suspend fun unmuteConversation(id: Long) {
+        db.conversationDao().updateConversationMuted(id, false)
+    }
+
 }

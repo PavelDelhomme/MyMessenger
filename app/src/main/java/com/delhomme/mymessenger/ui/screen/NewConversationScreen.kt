@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.delhomme.mymessenger.ui.components.DrawerComponent
 import com.delhomme.mymessenger.ui.components.SearchBar
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.getAllContacts
@@ -117,7 +118,12 @@ fun NewConversationScreen(nav: NavController) {
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
                 placeholder = "Rechercher des contacts...",
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                /*drawerComponent = DrawerComponent(
+                    navController = nav,
+                    onClose = { searchQuery = "" }
+                ),*/
+                onClose = { searchQuery = "" }
             )
 
             if (isLoading) {

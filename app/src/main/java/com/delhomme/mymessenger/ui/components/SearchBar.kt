@@ -1,9 +1,12 @@
 package com.delhomme.mymessenger.ui.components
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,14 +22,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String = "Rechercher...",
-    drawerComponent: DrawerComponent? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClose: () -> Unit = {}
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -42,16 +46,29 @@ fun SearchBar(
             )
         },
         trailingIcon = {
-            if (query.isNotEmpty()) {
+            Row {
+                if (query.isNotEmpty()) {
+                    IconButton(
+                        onClick = {
+                            onQueryChange("")
+                            keyboardController?.hide()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Effacer"
+                        )
+                    }
+                }
                 IconButton(
                     onClick = {
-                        onQueryChange("")
+                        onClose()
                         keyboardController?.hide()
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Effacer"
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Fermer"
                     )
                 }
             }

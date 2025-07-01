@@ -16,6 +16,7 @@ import com.delhomme.mymessenger.data.local.AppDatabase
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.data.repository.MessageRepository
+import com.delhomme.mymessenger.domain.SpamFilter
 import com.delhomme.mymessenger.utils.lookupContact
 import kotlin.jvm.java
 
@@ -50,25 +51,34 @@ class SmsSaveWorker(
                 type = "sms",
                 status = "DELIVERED"
             )
+            // Vérification spam
+            if (SpamFilter.isSpam(message)) {
+                val spamMessage = message.copy(status = "SPAM")
+                msgDao.insertMessages(listOf(spamMessage))
+                return Result.success()
+            }
             msgDao.insertMessages(listOf(message))
         }
 
-        // Mettre à jour la conversation
-        val conversation = convDao.getConversationByPhone(address) ?: ConversationEntity(
-            id = convId,
-            phoneNumber = address,
-            fullName = name ?: address,
-            lastMessage = body,
-            lastDate = System.currentTimeMillis(),
-            numberOfMessages = 1,
-            photoUri = photo
-        ).apply {
-            convDao.insertConversations(listOf(this))
+        // Gestion de la conversation
+        var conversation = convDao.getConversationByPhone(address)
+        if (conversation == null) {
+            conversation = ConversationEntity(
+                id = convId,
+                phoneNumber = address,
+                fullName = name ?: address,
+                lastMessage = body,
+                lastDate = System.currentTimeMillis(),
+                numberOfMessages = 1,
+                photoUri = photo
+            )
+            convDao.insertConversations(listOf(conversation))
+        } else {
+            convDao.updateLastMessage(conversation.id, body, System.currentTimeMillis())
         }
 
         // Notification
         showIncomingNotification(applicationContext, convId, name ?: address, body)
-
         return Result.success()
     }
 }

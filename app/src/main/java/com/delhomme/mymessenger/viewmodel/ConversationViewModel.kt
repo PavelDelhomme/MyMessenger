@@ -50,4 +50,56 @@ class ConversationViewModel @Inject constructor(
         val emptyConvs = repo.getEmptyConversations()
         repo.deleteConversations(emptyConvs)
     }
+
+    suspend fun getArchivedConversations(): List<ConversationEntity> {
+        return repo.getArchivedConversations()
+    }
+
+    suspend fun getBlockedConversations(): List<ConversationEntity> {
+        return repo.getBlockedConversations()
+    }
+
+    suspend fun getPinnedConversations(): List<ConversationEntity> {
+        return repo.getPinnedConversations()
+    }
+
+    suspend fun getMutedConversations(): List<ConversationEntity> {
+        return repo.getMutedConversations()
+    }
+
+    suspend fun archiveConversation(id: Long) {
+        repo.archiveConversation(id)
+    }
+
+    fun unarchiveConversation(id: Long) {
+        repo.unarchiveConversation(id)
+    }
+
+    suspend fun blockConversation(id: Long) {
+        repo.blockConversation(id)
+    }
+
+    suspend fun unblockConversation(id: Long) {
+        repo.unblockConversation(id)
+    }
+
+    suspend fun pinConversation(id: Long) {
+        repo.pinConversation(id)
+    }
+
+    suspend fun unpinConversation(id: Long) {
+        repo.unpinConversation(id)
+    }
+
+    suspend fun muteConversation(id: Long) {
+        repo.muteConversation(id)
+    }
+
+    suspend fun unmuteConversation(id: Long) {
+        repo.unmuteConversation(id)
+    }
+
+    suspend fun deleteConversation(id: Long) {
+        repo.deleteConversation(id)
+    }
 }

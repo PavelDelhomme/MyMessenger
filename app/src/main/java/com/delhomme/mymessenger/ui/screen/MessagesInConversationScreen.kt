@@ -92,9 +92,6 @@ fun MessagesInConversationScreen(
     // Faire défiler vers le bas lors de l'ajout de nouveaux messages
     LaunchedEffect(messages.itemCount) {
         if (messages.itemCount > 0) {
-            /*scope.launch {
-                scrollState.animateScrollToItem(0)
-            }*/
             scrollState.scrollToItem(0)
         }
     }
