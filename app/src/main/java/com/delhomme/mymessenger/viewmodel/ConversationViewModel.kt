@@ -1,4 +1,7 @@
 package com.delhomme.mymessenger.viewmodel
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -7,12 +10,14 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.repository.ConversationRepository
+import com.delhomme.mymessenger.ui.components.ConversationAction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -99,7 +104,31 @@ class ConversationViewModel @Inject constructor(
         repo.unmuteConversation(id)
     }
 
-    suspend fun deleteConversation(id: Long) {
+    fun deleteConversation(id: Long) {
         repo.deleteConversation(id)
+    }
+
+    fun handleAction(action: ConversationAction, id: Long) {
+        viewModelScope.launch {
+            when (action) {
+                ConversationAction.Archive -> archiveConversation(id)
+                ConversationAction.Unarchive -> unarchiveConversation(id)
+                ConversationAction.Pin -> pinConversation(id)
+                ConversationAction.Unpin -> unpinConversation(id)
+                ConversationAction.Mute -> muteConversation(id)
+                ConversationAction.Unmute -> unmuteConversation(id)
+                ConversationAction.Block -> blockConversation(id)
+                ConversationAction.Unblock -> unblockConversation(id)
+                ConversationAction.Call -> {
+                    val conversation = repo.getConversationById(id)
+                    conversation?.phoneNumber?.let { phoneNumber ->
+                        val context = LocalContext.current
+                        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${phoneNumber}"))
+                        context.startActivity(intent)
+                    }
+                }
+                else -> {/* Ne rien faire */}
+            }
+        }
     }
 }

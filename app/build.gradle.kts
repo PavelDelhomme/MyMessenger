@@ -95,6 +95,9 @@ dependencies {
 
     implementation(libs.accompanist.permissions)
 
+    // Phone number
+    implementation(libs.libphonenumber)
+
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

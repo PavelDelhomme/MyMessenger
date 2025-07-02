@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,10 +34,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.delhomme.mymessenger.ui.components.DrawerComponent
 import com.delhomme.mymessenger.ui.components.SearchBar
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.getAllContacts
+import com.delhomme.mymessenger.utils.normalizePhoneNumber
 import com.delhomme.mymessenger.viewmodel.ConversationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,7 +68,7 @@ fun NewConversationScreen(nav: NavController) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             // Récupération des contacts
-            val contactList = getAllContacts(context)
+            val contactList = getAllContacts(context).distinctBy { it.first }
             // Mise à jour de l'état dans le dispatcher principal
             withContext(Dispatchers.Main) {
                 contactsState.value = contactList
@@ -98,7 +98,7 @@ fun NewConversationScreen(nav: NavController) {
                     IconButton(onClick = {
                         nav.popBackStack() // Retour à l'écran précédent
                     }) {
-                        Icon(Icons.Filled.ArrowBack, "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -141,12 +141,12 @@ fun NewConversationScreen(nav: NavController) {
                 ) {
                     items(filteredContacts, key = { it.first }) { contact ->
                         val (number, name) = contact
-                        val formattedNumber = formatFrenchPhoneNumber(number)
+                        val normalizedPhone = normalizePhoneNumber(number)
 
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    text = if (name.isBlank()) "Envoyer un SMS à $formattedNumber"
+                                    text = if (name.isBlank()) "Envoyer un SMS à $normalizedPhone"
                                     else name,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -154,7 +154,7 @@ fun NewConversationScreen(nav: NavController) {
                             },
                             supportingContent = {
                                 Text(
-                                    text = formattedNumber,
+                                    text = normalizedPhone,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -164,10 +164,10 @@ fun NewConversationScreen(nav: NavController) {
                                     // Créer la conversation avant la navigation
                                     scope.launch {
                                         viewModel.createConversationIfNeeded(
-                                            phoneNumber = number,
+                                            phoneNumber = normalizedPhone,
                                             fullName = name
                                         )
-                                        nav.navigate("messages/${number.hashCode().toLong()}?name=${URLEncoder.encode(name, "UTF-8")}&addr=$number")
+                                        nav.navigate("messages/${number.hashCode().toLong()}?name=${URLEncoder.encode(name, "UTF-8")}&addr=$normalizedPhone")
                                     }
                                 }
                                 .padding(8.dp)

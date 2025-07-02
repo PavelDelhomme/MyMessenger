@@ -3,6 +3,8 @@ package com.delhomme.mymessenger.utils
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
+import com.google.i18n.phonenumbers.PhoneNumberUtil
+
 
 fun lookupName(context: Context, number: String): String {
     val uri = Uri.withAppendedPath(
@@ -83,5 +85,23 @@ fun formatFrenchPhoneNumber(number: String): String {
         digits.length == 9 && digits.startsWith('1') ->
             "${digits.substring(0, 1)} ${digits.substring(1, 3)} ${digits.substring(3, 5)} ${digits.substring(5, 7)} ${digits.substring(7, 9)}"
         else -> number
+    }
+}
+
+
+fun normalizePhoneNumber(number: String): String {
+    val phoneUtil = PhoneNumberUtil.getInstance()
+    return try {
+        val parsedNumber = phoneUtil.parse(number, null)
+        phoneUtil.format(parsedNumber, PhoneNumberUtil.PhoneNumberFormat.E164)
+    } catch (e: Exception) {
+        // Fallback pour les numéros invalides
+        val digits = number.filter { it.isDigit() }
+        when {
+            digits.startsWith("33") && digits.length == 11 -> "+$digits"
+            digits.startsWith("0") && digits.length == 10 -> "+33${digits.substring(1)}"
+            digits.startsWith("+") -> number
+            else -> "+$digits"
+        }
     }
 }

@@ -15,20 +15,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.compose.foundation.lazy.items
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.ui.components.ConversationAction
 import com.delhomme.mymessenger.ui.components.ConversationRow
 import com.delhomme.mymessenger.viewmodel.ConversationViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveScreen(navController: NavController) {
     val viewModel: ConversationViewModel = hiltViewModel()
     var archivedConversations by remember { mutableStateOf(emptyList<ConversationEntity>()) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         archivedConversations = viewModel.getArchivedConversations()
@@ -47,17 +51,18 @@ fun ArchiveScreen(navController: NavController) {
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding)) {
-            items(archivedConversations.size) { conv ->
+            items(archivedConversations) { conv -> // Correction 1: Utiliser la liste directement
                 ConversationRow(
                     conversation = conv,
                     onAction = { action ->
                         when (action) {
                             ConversationAction.Unarchive -> {
-                                viewModel.unarchiveConversation(conv.id)
-                                // Rafraîchir la liste
-                                archivedConversations = archivedConversations.filter { it.id != conv.id }
+                                coroutineScope.launch { // Correction 2: Appel dans une coroutine
+                                    viewModel.unarchiveConversation(conv.id)
+                                    // Rafraîchir la liste
+                                    archivedConversations = archivedConversations.filter { it.id != conv.id }
+                                }
                             }
-                            // Ajouter d'autres actions au besoin
                             else -> {}
                         }
                     },

@@ -54,7 +54,7 @@ interface ConversationDao {
     suspend fun deleteConversations(conversations: List<ConversationEntity>)
 
     @Query("DELETE FROM conversations WHERE id = :id")
-    suspend fun deleteConversationById(id: Long)
+    fun deleteConversationById(id: Long)
 
 
     @Query("UPDATE conversations SET isArchived = :archived WHERE id = :id")

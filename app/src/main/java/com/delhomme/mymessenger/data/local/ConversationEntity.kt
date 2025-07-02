@@ -1,10 +1,14 @@
 package com.delhomme.mymessenger.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 
-@Entity(tableName = "conversations")
+@Entity(
+    tableName = "conversations",
+    indices = [Index(value = ["phoneNumber"], unique = true)]
+)
 data class ConversationEntity(
     @PrimaryKey val id: Long,
     val phoneNumber: String,

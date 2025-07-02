@@ -13,10 +13,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 @AndroidEntryPoint
 class SyncService : JobService() {
-    @Inject lateinit var workManager: WorkManager
+
+    @Inject
+    lateinit var workManager: WorkManager // Injection via Hilt
 
     override fun onStartJob(params: JobParameters?): Boolean {
         val constraints = Constraints.Builder()
@@ -25,8 +26,8 @@ class SyncService : JobService() {
             .build()
 
         val workRequest = PeriodicWorkRequestBuilder<SmsSyncWorker>(
-            repeatInterval = 1,
-            repeatIntervalTimeUnit = TimeUnit.HOURS
+            1, // Intervalle
+            TimeUnit.HOURS // Unité
         )
             .setConstraints(constraints)
             .build()
@@ -38,7 +39,6 @@ class SyncService : JobService() {
         )
         return true
     }
-
 
     override fun onStopJob(params: JobParameters?): Boolean {
         return true

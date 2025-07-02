@@ -73,6 +73,18 @@ fun MessagesInConversationScreen(
 
     val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
 
+    LaunchedEffect(conversationId) {
+        // Préchargement des données
+    }
+
+    LaunchedEffect(Unit) {
+        // Vérification que la conversation existe
+        val conversation = viewModel.getConversation(conversationId)
+        if (conversation == null) {
+            navController.popBackStack()
+        }
+    }
+
     // Utilisation derivedStateOf pour optimisation des re-compositions
     val displayName by remember(nameParam, addrParam) {
         derivedStateOf {

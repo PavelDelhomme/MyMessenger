@@ -8,6 +8,7 @@ import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.lookupContact
+import com.delhomme.mymessenger.utils.normalizePhoneNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -52,16 +53,16 @@ class ConversationRepository(private val db: AppDatabase) {
 
             // 3. Synchroniser avec la base
             smsMap.forEach { (address, messages) ->
-                val phoneNumber = formatFrenchPhoneNumber(address)
+                val normalizedPhone = normalizePhoneNumber(address)
 
                 // Trouver ou créer la conversation
-                var conversation = existingConversations.find { it.phoneNumber == phoneNumber }
+                var conversation = existingConversations.find { it.phoneNumber == normalizedPhone }
                 if (conversation == null) {
                     val (name, photo) = lookupContact(context, address)
                     conversation = ConversationEntity(
-                        id = phoneNumber.hashCode().toLong(),
-                        phoneNumber = phoneNumber,
-                        fullName = name ?: phoneNumber,
+                        id = normalizedPhone.hashCode().toLong(),
+                        phoneNumber = normalizedPhone,
+                        fullName = name ?: normalizedPhone,
                         lastMessage = messages.firstOrNull()?.body ?: "",
                         lastDate = messages.firstOrNull()?.date ?: System.currentTimeMillis(),
                         numberOfMessages = messages.size,
@@ -170,7 +171,7 @@ class ConversationRepository(private val db: AppDatabase) {
         db.conversationDao().updateConversationArchived(id, false)
     }
 
-    suspend fun deleteConversation(id: Long) {
+    fun deleteConversation(id: Long) {
         db.conversationDao().deleteConversationById(id)
     }
 
