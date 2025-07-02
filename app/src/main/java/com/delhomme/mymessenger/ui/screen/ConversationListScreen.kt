@@ -154,7 +154,9 @@ fun ConversationListScreen(
                                     else -> viewModel.handleAction(action, conv.id)
                                 }
                             },
-                            onClick = { onConversationClick(conv.id) }
+                            onClick = { onConversationClick(conv.id) },
+                            onLongClick = { viewModel.selectedConversations.add(conv.id) },
+                            isSelected = viewModel.selectedConversations.contains(conv.id),
                         )
                     }
                 }

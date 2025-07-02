@@ -1,4 +1,5 @@
 package com.delhomme.mymessenger.viewmodel
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
@@ -9,6 +10,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.delhomme.mymessenger.data.local.ConversationEntity
+import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.data.repository.ConversationRepository
 import com.delhomme.mymessenger.ui.components.ConversationAction
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -108,7 +110,7 @@ class ConversationViewModel @Inject constructor(
         repo.deleteConversation(id)
     }
 
-    fun handleAction(action: ConversationAction, id: Long) {
+    fun handleAction(action: ConversationAction, id: Long, context: Context? = null) {
         viewModelScope.launch {
             when (action) {
                 ConversationAction.Archive -> archiveConversation(id)
@@ -122,13 +124,26 @@ class ConversationViewModel @Inject constructor(
                 ConversationAction.Call -> {
                     val conversation = repo.getConversationById(id)
                     conversation?.phoneNumber?.let { phoneNumber ->
-                        val context = LocalContext.current
-                        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${phoneNumber}"))
-                        context.startActivity(intent)
+                        context?.let { ctx ->
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:$phoneNumber")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            ctx.startActivity(intent)
+                        }
                     }
                 }
                 else -> {/* Ne rien faire */}
             }
         }
     }
+
+    fun getMessages(conversationId: Long): Flow<PagingData<MessageEntity>> {
+        return Pager(
+            config = PagingConfig(pageSize = 30, enablePlaceholders = false)
+        ) {
+            repo.getMessagesByConversationPaging(conversationId)
+        }.flow.cachedIn(viewModelScope)
+    }
+
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -36,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +54,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.ui.components.MessageBubble
+import com.delhomme.mymessenger.ui.components.MessageItem
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.formatMessageDate
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
@@ -72,6 +75,27 @@ fun MessagesInConversationScreen(
     val addrParam = navController.currentBackStackEntry?.arguments?.getString("addr") ?: ""
 
     val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
+    Text("Messages chargés : ${messages.itemCount}")
+    val conversationId = navController.currentBackStackEntry?.arguments?.getLong("conversationId")
+    val context = LocalContext.current
+
+    val scrollState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var messageText by remember { mutableStateOf("") }
+    var showOptions by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+    var selectedMessages = remember { mutableStateListOf<Long>() }
+    var showMenuForMessageId by remember { mutableStateOf<Long?>(null) }
+    var replyToMessage by remember { mutableStateOf<MessageEntity?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    // Filtrage
+    val filteredMessages = remember(messages.itemSnapshotList.items, searchQuery) {
+        if (searchQuery.isBlank()) messages.itemSnapshotList.items
+        else messages.itemSnapshotList.items.filter { it?.body?.contains(searchQuery, true) == true }
+    }
 
     LaunchedEffect(conversationId) {
         // Préchargement des données
@@ -79,7 +103,7 @@ fun MessagesInConversationScreen(
 
     LaunchedEffect(Unit) {
         // Vérification que la conversation existe
-        val conversation = viewModel.getConversation(conversationId)
+        val conversation = viewModel.getConversation(conversationId!!)
         if (conversation == null) {
             navController.popBackStack()
         }
@@ -92,14 +116,6 @@ fun MessagesInConversationScreen(
             else formatFrenchPhoneNumber(addrParam)
         }
     }
-
-    val context = LocalContext.current
-    val scrollState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var messageText by remember { mutableStateOf("") }
-    var showOptions by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
 
     // Faire défiler vers le bas lors de l'ajout de nouveaux messages
     LaunchedEffect(messages.itemCount) {
@@ -155,6 +171,24 @@ fun MessagesInConversationScreen(
                     .navigationBarsPadding()
                     //.imePadding() // Ajout important pour le clavier
             ) {
+                if (replyToMessage != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = replyToMessage!!.body.take(50),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { replyToMessage = null}) {
+                            Icon(Icons.Filled.Close, "Annuler la réponse")
+                        }
+                    }
+                }
                 // Barre de saisie du message
                 Row(
                     modifier = Modifier
@@ -184,11 +218,13 @@ fun MessagesInConversationScreen(
                         onClick = {
                             // Envoyer le message
                             viewModel.sendMessage(
-                                conversationId = conversationId,
+                                conversationId = conversationId!!,
                                 text = messageText,
-                                phoneNumber = addrParam
+                                phoneNumber = addrParam,
+                                replyToId = replyToMessage?.id
                             )
                             messageText = ""
+                            replyToMessage = null
                             // Rafraîchir manuellement les messages
                             scope.launch {
                                 messages.refresh()
@@ -212,33 +248,62 @@ fun MessagesInConversationScreen(
                 }
             }
         }
-    ) { innerPadding ->
+    ) {
+        innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
             //reverseLayout = true,
-            state = scrollState
+            state = scrollState,
+
         ) {
-            items(                                                  // <-- overload standard de LazyListScope
-                count = messages.itemCount,                         // nombre d’éléments
-                key = { index -> messages[index]?.id ?: index }     // clé stable (facultatif mais recommandé)
-            ) { index ->
-                val message = messages[index]
-                // Utiliser remember pour optimiser le rendu des bulles
-                key(message!!.id) {
-                    MessageBubble(
+            items(filteredMessages.size) { index ->
+                val message = filteredMessages[index]
+                if (message != null) {
+                    // Charger le message cité si besoin
+                    var repliedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+                    LaunchedEffect(message.replyToId) {
+                        repliedMessage = message.replyToId?.let { viewModel.getMessageById(it) }
+                    }
+                    MessageItem(
                         message = message,
+                        isSelected = selectedMessages.contains(message.id),
                         onLongClick = {
-                            selectedMessage = message
-                            showDatePicker = true
-                        }
+                            if (selectedMessages.contains(message.id)) selectedMessages.remove(
+                                message.id
+                            )
+                            else selectedMessages.add(message.id)
+                        },
+                        onClick = {
+                            if (selectedMessages.isNotEmpty()) {
+                                // En mode sélection multiple, clic ajoute/enlève
+                                if (selectedMessages.contains(message.id)) selectedMessages.remove(
+                                    message.id
+                                )
+                                else selectedMessages.add(message.id)
+                            } else {
+                                // Sinon, afficher menu contextuel
+                                showMenuForMessageId = message.id
+                            }
+                        },
+                        showMenu = showMenuForMessageId == message.id,
+                        onMenuDismiss = { showMenuForMessageId = null },
+                        onCopy = { /* copier message.body dans clipboard */ },
+                        onDelete = { /* supprimer message */ },
+                        onForward = { /* transférer message */ },
+                        onReply = {
+                            replyToMessage = message
+                            showMenuForMessageId = null
+                        },
+                        repliedMessage = repliedMessage
                     )
                 }
             }
         }
     }
 
+    Text("Messages chargés : ${messages.itemCount}")
     // Afficher la date complète au clic
     if (showDatePicker && selectedMessage != null) {
         AlertDialog(
