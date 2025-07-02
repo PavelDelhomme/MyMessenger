@@ -25,4 +25,12 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE body = :content AND address = :address LIMIT 1")
     suspend fun getMessageByContent(content: String, address: String): MessageEntity?
 
+    @Query("SELECT * FROM messages WHERE id = :messageId LIMIT 1")
+    suspend fun getMessageById(messageId: Long): MessageEntity?
+
+    @Query("DELETE FROM messages WHERE id IN (:ids)")
+    suspend fun deleteMessages(ids: List<Long>)
+
+    @Query("SELECT body FROM messages WHERE id IN (:ids) ORDER BY date ASC")
+    suspend fun getMessagesText(ids: List<Long>): List<String>
 }

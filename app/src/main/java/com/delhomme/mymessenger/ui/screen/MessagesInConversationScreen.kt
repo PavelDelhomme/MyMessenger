@@ -1,62 +1,44 @@
 package com.delhomme.mymessenger.ui.screen
 
-import android.R.attr.key
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+//import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.*
+/*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Delete*/
+/*import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar*/
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+
+/*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.setValue*/
+import androidx.compose.runtime.*
+/*import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext*/
+import androidx.compose.ui.platform.*
+import androidx.compose.ui.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
-import com.delhomme.mymessenger.ui.components.MessageBubble
+import com.delhomme.mymessenger.ui.components.SearchBar
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
-import com.delhomme.mymessenger.utils.formatMessageDate
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
-import kotlinx.coroutines.launch
-import okhttp3.Cache.Companion.key
 import java.net.URLDecoder
 
 
@@ -67,11 +49,52 @@ fun MessagesInConversationScreen(
     navController: NavController,
     viewModel: MessageViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
+
     // Récupérer les paramètres de navigation
     val nameParam = navController.currentBackStackEntry?.arguments?.getString("name")
     val addrParam = navController.currentBackStackEntry?.arguments?.getString("addr") ?: ""
 
-    val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var messageText by remember { mutableStateOf("") }
+    var showOptions by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+
+    val displayName = remember(nameParam, addrParam) {
+        if (!nameParam.isNullOrBlank()) URLDecoder.decode(nameParam, "UTF-8")
+        else formatFrenchPhoneNumber(addrParam)
+    }
+    var selectedMessageId by remember { mutableStateOf<Long?>(null) }
+    var showMenuForMessageId by remember { mutableStateOf<Long?>(null) }
+    var selectedMessages = remember { mutableStateListOf<Long>() }
+    var replyToMessage by remember { mutableStateOf<MessageEntity?>(null) }
+    // Utilisation derivedStateOf pour optimisation des re-compositions
+    /*val displayName by remember(nameParam, addrParam) {
+        derivedStateOf {
+            if (!nameParam.isNullOrBlank()) URLDecoder.decode(nameParam, "UTF-8")
+            else formatFrenchPhoneNumber(addrParam)
+        }
+    }*/
+
+    val scrollState = rememberLazyListState()
+
+    // Filtrage des messages
+    val filteredMessages = remember(messages.itemSnapshotList.items, searchQuery) {
+        if (searchQuery.isBlank()) messages.itemSnapshotList.items
+        else messages.itemSnapshotList.items.filter { it?.body?.contains(searchQuery, true) == true }
+    }
+
+    // Scroll automatique vers le bas à chaque nouveau message
+    LaunchedEffect(messages.itemCount) {
+        if (messages.itemCount > 0) {
+            scrollState.scrollToItem(0)
+        }
+    }
 
     LaunchedEffect(conversationId) {
         // Préchargement des données
@@ -84,69 +107,78 @@ fun MessagesInConversationScreen(
             navController.popBackStack()
         }
     }
-
-    // Utilisation derivedStateOf pour optimisation des re-compositions
-    val displayName by remember(nameParam, addrParam) {
-        derivedStateOf {
-            if (!nameParam.isNullOrBlank()) URLDecoder.decode(nameParam, "UTF-8")
-            else formatFrenchPhoneNumber(addrParam)
-        }
-    }
-
-    val context = LocalContext.current
-    val scrollState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var messageText by remember { mutableStateOf("") }
-    var showOptions by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
-
-    // Faire défiler vers le bas lors de l'ajout de nouveaux messages
-    LaunchedEffect(messages.itemCount) {
-        if (messages.itemCount > 0) {
-            scrollState.scrollToItem(0)
-        }
+    BackHandler(enabled = selectedMessages.isNotEmpty()) {
+        selectedMessages.clear()
     }
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(displayName, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
+            if (isSearchActive) {
+                // Barre de recherche active
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onClose = { isSearchActive = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (selectedMessages.isNotEmpty()) {
+                TopAppBar(
+                    title = { Text("${selectedMessages.size} sélectionné(s)") },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.deleteMessages(selectedMessages)
+                            selectedMessages.clear()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Supprimer")
+                        }
+                        IconButton(onClick = {
+                            viewModel.copyMessagesToClipboard(selectedMessages, context)
+                        }) { Icon(Icons.Filled.ContentCopy, null) }
+
+                        IconButton(onClick = { selectedMessages.clear() }) {
+                            Icon(Icons.Default.Close, "Annuler")
+                        }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { /* Recherche dans la conversation */ }) {
-                        Icon(Icons.Filled.Search, "Rechercher")
+                )
+            } else {
+                CenterAlignedTopAppBar(
+                    title = { Text(displayName, color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(Icons.Filled.Search, "Rechercher")
+                        }
+                        IconButton(onClick = { showOptions = true }) {
+                            Icon(Icons.Filled.MoreVert, "Options")
+                        }
+                        DropdownMenu(
+                            expanded = showOptions,
+                            onDismissRequest = { showOptions = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Détails") },
+                                onClick = { /* TODO */ }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Médias") },
+                                onClick = { /* TODO */ }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Notifications") },
+                                onClick = { /* TODO */ }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Effacer") },
+                                onClick = { /* TODO */ }
+                            )
+                        }
                     }
-                    IconButton(onClick = { showOptions = true }) {
-                        Icon(Icons.Filled.MoreVert, "Options")
-                    }
-                    DropdownMenu(
-                        expanded = showOptions,
-                        onDismissRequest = { showOptions = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Détails") },
-                            onClick = { /* Naviguer vers les détails de la conversation */ }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Médias") },
-                            onClick = { /* Naviguer vers les médias */ }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Notifications") },
-                            onClick = { /* Gérer les notifications */ }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Effacer") },
-                            onClick = { /* Effacer la conversation */ }
-                        )
-                    }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             Column(
@@ -155,6 +187,25 @@ fun MessagesInConversationScreen(
                     .navigationBarsPadding()
                     //.imePadding() // Ajout important pour le clavier
             ) {
+                if (replyToMessage != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = replyToMessage!!.body.take(50),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { replyToMessage = null }) {
+                            Icon(Icons.Default.Close, "Annuler la réponse")
+                        }
+                    }
+                }
+
                 // Barre de saisie du message
                 Row(
                     modifier = Modifier
@@ -186,11 +237,13 @@ fun MessagesInConversationScreen(
                             viewModel.sendMessage(
                                 conversationId = conversationId,
                                 text = messageText,
-                                phoneNumber = addrParam
+                                phoneNumber = addrParam,
+                                replyToId = replyToMessage?.id
                             )
                             messageText = ""
                             // Rafraîchir manuellement les messages
-                            scope.launch {
+                            replyToMessage = null
+                            coroutineScope.launch {
                                 messages.refresh()
                                 scrollState.animateScrollToItem(0)
                             }
@@ -217,21 +270,43 @@ fun MessagesInConversationScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
-            //reverseLayout = true,
+            reverseLayout = true, // Les messages récents sont en bas ?
             state = scrollState
         ) {
-            items(                                                  // <-- overload standard de LazyListScope
-                count = messages.itemCount,                         // nombre d’éléments
-                key = { index -> messages[index]?.id ?: index }     // clé stable (facultatif mais recommandé)
-            ) { index ->
-                val message = messages[index]
-                // Utiliser remember pour optimiser le rendu des bulles
-                key(message!!.id) {
-                    MessageBubble(
+            items(filteredMessages.size) { index ->
+                val message = filteredMessages[index]
+                if (message != null) {
+                    MessageItem(
                         message = message,
+                        isSelected = selectedMessages.contains(message.id),
                         onLongClick = {
-                            selectedMessage = message
-                            showDatePicker = true
+                            // Sélection multiple par long click
+                            if (selectedMessages.contains(message.id)) {
+                                selectedMessages.remove(message.id)
+                            } else {
+                                selectedMessages.add(message.id)
+                            }
+                        },
+                        onClick = {
+                            if (selectedMessages.isNotEmpty()) {
+                                if (selectedMessages.contains(message.id)) {
+                                    selectedMessages.remove(message.id)
+                                } else {
+                                    selectedMessages.add(message.id)
+                                }
+                            } else {
+                                // Sinon afficher menu contextuel
+                                showMenuForMessageId = message.id
+                            }
+                        },
+                        showMenu = showMenuForMessageId == message.id,
+                        onMenuDismiss = { showMenuForMessageId = null },
+                        onCopy = { /* copier message.body dans clipboard */ },
+                        onDelete = { /* supprimer le message */ },
+                        onForward = { /* transférer le message */ },
+                        onReply = {
+                            replyToMessage = message
+                            showMenuForMessageId = null
                         }
                     )
                 }

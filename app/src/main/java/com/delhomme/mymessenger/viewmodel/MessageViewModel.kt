@@ -1,5 +1,8 @@
 package com.delhomme.mymessenger.viewmodel
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -34,9 +37,9 @@ class MessageViewModel @Inject constructor(
         }.flow.cachedIn(viewModelScope)
     }
 
-    fun sendMessage(conversationId: Long, text: String, phoneNumber: String) {
+    fun sendMessage(conversationId: Long, text: String, phoneNumber: String, replyToId: Long? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Créer le message local
+            // Créer le message local avec replyToId
             val message = MessageEntity(
                 id = System.currentTimeMillis(),
                 conversationId = conversationId,
@@ -45,7 +48,8 @@ class MessageViewModel @Inject constructor(
                 date = System.currentTimeMillis(),
                 isMe = true,
                 type = "sms",
-                status = "SENDING"
+                status = "SENDING",
+                replyToId = replyToId // <- Ajout du replyToId
             )
 
             // Insérer dans la base
@@ -65,5 +69,22 @@ class MessageViewModel @Inject constructor(
 
     suspend fun getConversation(conversationId: Long): ConversationEntity? {
         return conversationRepo.getConversationById(conversationId)
+    }
+
+    suspend fun getMessageById(messageId: Long): MessageEntity? {
+        return repo.getMessageById(messageId)
+    }
+
+    fun deleteMessages(ids: List<Long>) = viewModelScope.launch {
+        repo.deleteMessages(ids)
+    }
+
+    fun copyMessagesToClipboard(ids: List<Long>, context: Context) {
+        viewModelScope.launch {
+            val text = repo.getMessagesText(ids).joinToString("\n")
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Messages", text)
+            clipboard.setPrimaryClip(clip)
+        }
     }
 }

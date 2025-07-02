@@ -1,6 +1,7 @@
 [versions]
 accompanistPermissions = "0.31.1-alpha"
-agp = "8.10.1"
+#agp = "8.10.1"
+agp = "8.9.2"
 kotlin = "2.0.21"
 kotlin-ksp = "2.0.21-1.0.28"
 hilt = "2.51.1"
