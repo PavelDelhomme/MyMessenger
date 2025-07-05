@@ -29,12 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.delhomme.mymessenger.domain.EnergySettings
-import com.delhomme.mymessenger.domain.EnergySettings.spamCacheExpiry
+//import com.delhomme.mymessenger.domain.EnergySettings.spamCacheExpiry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
-    var syncFrequency by remember { mutableStateOf(EnergySettings.syncFrequency) }
+    /*var syncFrequency by remember { mutableStateOf(EnergySettings.syncFrequency) }
     var backgroundSync by remember { mutableStateOf(EnergySettings.backgroundSync) }
     var spamFilter by remember { mutableStateOf(EnergySettings.spamFilterEnabled) }
     var imageCompression by remember { mutableStateOf(EnergySettings.imageCompression) }
@@ -44,7 +44,7 @@ fun SettingsScreen(navController: NavController) {
     var spamCacheSize by remember { mutableStateOf(EnergySettings.spamCacheSize) }
     var spamCacheExpiryHours by remember { mutableStateOf(EnergySettings.spamCacheExpiry / (60 * 60 * 1000).toInt()) } // en heures
 
-
+    */
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -68,16 +68,16 @@ fun SettingsScreen(navController: NavController) {
         Spacer(Modifier.height(24.dp))
 
         Text("Fréquence de synchronisation", style = MaterialTheme.typography.titleMedium)
-        Slider(
+        /*Slider(
             value = syncFrequency.toFloat(),
             onValueChange = { syncFrequency = it.toInt() },
             valueRange = 15f..240f,
             steps = 14
         )
-        Text("$syncFrequency minutes")
+        Text("$syncFrequency minutes")*/
 
         Spacer(Modifier.height(16.dp))
-
+        /*
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = backgroundSync,
@@ -85,26 +85,26 @@ fun SettingsScreen(navController: NavController) {
             )
             Text("Synchronisation en arrière-plan")
         }
-
+        */
 
             Text("Messagerie avancée", style = MaterialTheme.typography.headlineMedium)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
+                /*Checkbox(
                     checked = rcsEnabled,
                     onCheckedChange = { rcsEnabled = it }
-                )
+                )*/
                 Text("Activer RCS (Rich Communication Services)")
             }
             Text("Sécurité RCS", style = MaterialTheme.typography.headlineMedium)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
+                /*Checkbox(
                     checked = rcsEnabled,
                     onCheckedChange = { rcsEnabled = it }
-                )
+                )*/
                 Text("Activer RCS")
-            }
+            }/*
             if (rcsEnabled) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
@@ -113,21 +113,21 @@ fun SettingsScreen(navController: NavController) {
                     )
                     Text("Chiffrement end-to-end")
                 }
-            }
+            }*/
 
             Text("Taille du cache anti-spam", style = MaterialTheme.typography.titleMedium)
-            Slider(
+            /*Slider(
                 value = spamCacheSize.toFloat(),
                 onValueChange = { spamCacheSize = it.toInt() },
                 valueRange = 100f..5000f,
                 steps = 49
             )
-            Text("$spamCacheSize entrées")
+            Text("$spamCacheSize entrées")*/
 
             Spacer(Modifier.height(16.dp))
 
             Text("Expiration du cache (heures)", style = MaterialTheme.typography.titleMedium)
-            Slider(
+            /*Slider(
                 value = spamCacheExpiry.toFloat(),
                 onValueChange = { spamCacheExpiry = it.toLong() },
                 valueRange = 1f..720f, // 1 heure à 30 jours
@@ -153,7 +153,7 @@ fun SettingsScreen(navController: NavController) {
                     .padding(top = 24.dp)
             ) {
                 Text("Enregistrer les paramètres")
-            }
+            }*/
         }
     }
 }

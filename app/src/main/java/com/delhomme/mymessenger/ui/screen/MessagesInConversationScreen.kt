@@ -1,6 +1,6 @@
 package com.delhomme.mymessenger.ui.screen
 
-import android.R.attr.key
+//import android.R.attr.key
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,7 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+//import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,13 +53,13 @@ import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
-import com.delhomme.mymessenger.ui.components.MessageBubble
+//import com.delhomme.mymessenger.ui.components.MessageBubble
 import com.delhomme.mymessenger.ui.components.MessageItem
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.formatMessageDate
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
 import kotlinx.coroutines.launch
-import okhttp3.Cache.Companion.key
+//import okhttp3.Cache.Companion.key
 import java.net.URLDecoder
 
 
@@ -75,8 +75,18 @@ fun MessagesInConversationScreen(
     val addrParam = navController.currentBackStackEntry?.arguments?.getString("addr") ?: ""
 
     val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
-    Text("Messages chargés : ${messages.itemCount}")
-    val conversationId = navController.currentBackStackEntry?.arguments?.getLong("conversationId")
+    LaunchedEffect(messages) {
+        println("Type de messages : ${messages::class.qualifiedName}")
+    }
+    LaunchedEffect(Unit) {
+        viewModel.logAllMessages()
+    }
+
+    LaunchedEffect(conversationId) {
+        viewModel.logMessagesForConversation(conversationId)
+    }
+
+    //val conversationId = navController.currentBackStackEntry?.arguments?.getLong("conversationId")
     val context = LocalContext.current
 
     val scrollState = rememberLazyListState()
@@ -98,7 +108,8 @@ fun MessagesInConversationScreen(
     }
 
     LaunchedEffect(conversationId) {
-        // Préchargement des données
+        println("DEBUG: conversationId utilisé dans l'écran = $conversationId")
+        viewModel.logMessagesForConversation(conversationId!!)
     }
 
     LaunchedEffect(Unit) {
@@ -217,12 +228,14 @@ fun MessagesInConversationScreen(
                     IconButton(
                         onClick = {
                             // Envoyer le message
-                            viewModel.sendMessage(
-                                conversationId = conversationId!!,
-                                text = messageText,
-                                phoneNumber = addrParam,
-                                replyToId = replyToMessage?.id
-                            )
+                            scope.launch {
+                                viewModel.sendMessage(
+                                    conversationId = conversationId!!,
+                                    text = messageText,
+                                    phoneNumber = addrParam,
+                                    replyToId = replyToMessage?.id
+                                )
+                            }
                             messageText = ""
                             replyToMessage = null
                             // Rafraîchir manuellement les messages
@@ -258,9 +271,14 @@ fun MessagesInConversationScreen(
             state = scrollState,
 
         ) {
-            items(filteredMessages.size) { index ->
-                val message = filteredMessages[index]
-                if (message != null) {
+            if (filteredMessages.isEmpty()) {
+                item {
+                    Text("Aucun message à afficher", modifier = Modifier.padding(16.dp))
+                    Text("conversationId: $conversationId")
+                }
+            } else {
+                items(filteredMessages.size) { index ->
+                    val message = filteredMessages[index]
                     // Charger le message cité si besoin
                     var repliedMessage by remember { mutableStateOf<MessageEntity?>(null) }
                     LaunchedEffect(message.replyToId) {

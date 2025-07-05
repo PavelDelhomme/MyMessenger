@@ -2,6 +2,7 @@ package com.delhomme.mymessenger.viewmodel
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -30,6 +31,8 @@ class ConversationViewModel @Inject constructor(
     private val _search = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _search
 
+    val selectedConversations = mutableStateListOf<Long>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val conversations: Flow<PagingData<ConversationEntity>> = _search
         .flatMapLatest { q ->
@@ -53,74 +56,18 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-    suspend fun cleanEmptyConversations() {
-        val emptyConvs = repo.getEmptyConversations()
-        repo.deleteConversations(emptyConvs)
-    }
-
-    suspend fun getArchivedConversations(): List<ConversationEntity> {
-        return repo.getArchivedConversations()
-    }
-
-    suspend fun getBlockedConversations(): List<ConversationEntity> {
-        return repo.getBlockedConversations()
-    }
-
-    suspend fun getPinnedConversations(): List<ConversationEntity> {
-        return repo.getPinnedConversations()
-    }
-
-    suspend fun getMutedConversations(): List<ConversationEntity> {
-        return repo.getMutedConversations()
-    }
-
-    suspend fun archiveConversation(id: Long) {
-        repo.archiveConversation(id)
-    }
-
-    suspend fun unarchiveConversation(id: Long) {
-        repo.unarchiveConversation(id)
-    }
-
-    suspend fun blockConversation(id: Long) {
-        repo.blockConversation(id)
-    }
-
-    suspend fun unblockConversation(id: Long) {
-        repo.unblockConversation(id)
-    }
-
-    suspend fun pinConversation(id: Long) {
-        repo.pinConversation(id)
-    }
-
-    suspend fun unpinConversation(id: Long) {
-        repo.unpinConversation(id)
-    }
-
-    suspend fun muteConversation(id: Long) {
-        repo.muteConversation(id)
-    }
-
-    suspend fun unmuteConversation(id: Long) {
-        repo.unmuteConversation(id)
-    }
-
-    fun deleteConversation(id: Long) {
-        repo.deleteConversation(id)
-    }
 
     fun handleAction(action: ConversationAction, id: Long, context: Context? = null) {
         viewModelScope.launch {
             when (action) {
-                ConversationAction.Archive -> archiveConversation(id)
-                ConversationAction.Unarchive -> unarchiveConversation(id)
-                ConversationAction.Pin -> pinConversation(id)
-                ConversationAction.Unpin -> unpinConversation(id)
-                ConversationAction.Mute -> muteConversation(id)
-                ConversationAction.Unmute -> unmuteConversation(id)
-                ConversationAction.Block -> blockConversation(id)
-                ConversationAction.Unblock -> unblockConversation(id)
+                //ConversationAction.Archive -> archiveConversation(id)
+                //ConversationAction.Unarchive -> unarchiveConversation(id)
+                //ConversationAction.Pin -> pinConversation(id)
+                //ConversationAction.Unpin -> unpinConversation(id)
+                //ConversationAction.Mute -> muteConversation(id)
+                //ConversationAction.Unmute -> unmuteConversation(id)
+                //ConversationAction.Block -> blockConversation(id)
+                //ConversationAction.Unblock -> unblockConversation(id)
                 ConversationAction.Call -> {
                     val conversation = repo.getConversationById(id)
                     conversation?.phoneNumber?.let { phoneNumber ->
@@ -144,6 +91,13 @@ class ConversationViewModel @Inject constructor(
         ) {
             repo.getMessagesByConversationPaging(conversationId)
         }.flow.cachedIn(viewModelScope)
+    }
+
+    fun cleanEmptyConversations() {
+        viewModelScope.launch {
+            val emptyConvs = repo.getEmptyConversations()
+            repo.cleanEmptyConversation(emptyConvs)
+        }
     }
 
 }

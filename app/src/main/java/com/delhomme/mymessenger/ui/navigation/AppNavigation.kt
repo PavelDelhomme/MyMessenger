@@ -10,9 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.delhomme.mymessenger.ui.components.ConversationRoot
 import com.delhomme.mymessenger.ui.components.DrawerComponent
-import com.delhomme.mymessenger.ui.screen.ArchiveScreen
 import com.delhomme.mymessenger.ui.screen.ConversationListScreen
 import com.delhomme.mymessenger.ui.screen.MessagesInConversationScreen
 import com.delhomme.mymessenger.ui.screen.NewConversationScreen
@@ -80,7 +78,7 @@ fun AppNavigation() {
             composable("newConversation") {
                 NewConversationScreen(navController)
             }
-            composable("archive") { ArchiveScreen(navController) }
+            composable("archive") { /* Écran Archivage : ArchiveScreen(navController) */ }
             composable("trash") { /* Écran Corbeille : TrashScreen(navController) */ }
             composable("spam") { /* Écran Spam : SpamScreen(navController) */ }
             composable("settings") {

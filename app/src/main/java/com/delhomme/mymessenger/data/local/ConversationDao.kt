@@ -41,9 +41,6 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations")
     suspend fun getAllConversations(): List<ConversationEntity>
 
-    @Query("SELECT * FROM conversations WHERE isArchived = 1")
-    suspend fun getArchivedConversations(): List<ConversationEntity>
-
     @Query("UPDATE conversations SET lastMessage = :message, lastDate = :date, numberOfMessages = :count WHERE id = :id")
     suspend fun updateConversation(id: Long, message: String, date: Long, count: Int)
 
@@ -52,22 +49,4 @@ interface ConversationDao {
 
     @Delete
     suspend fun deleteConversations(conversations: List<ConversationEntity>)
-
-    @Query("DELETE FROM conversations WHERE id = :id")
-    fun deleteConversationById(id: Long)
-
-
-    @Query("UPDATE conversations SET isArchived = :archived WHERE id = :id")
-    suspend fun updateConversationArchived(id: Long, archived: Boolean)
-
-    @Query("UPDATE conversations SET isBlocked = :blocked WHERE id = :id")
-    suspend fun updateConversationBlocked(id: Long, blocked: Boolean)
-
-    @Query("UPDATE conversations SET isPinned = :pinned WHERE id = :id")
-    suspend fun updateConversationPinned(id: Long, pinned: Boolean)
-
-    @Query("UPDATE conversations SET isMuted = :muted WHERE id = :id")
-    suspend fun updateConversationMuted(id: Long, muted: Boolean)
-
-
 }

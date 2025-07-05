@@ -27,6 +27,7 @@ class MessageViewModel @Inject constructor(
     private val conversationRepo: ConversationRepository
 ) : ViewModel() {
     fun getMessages(conversationId: Long): Flow<PagingData<MessageEntity>> {
+        println("getMessages() appelé, retourne un Flow<PagingData<MessageEntity>>")
         return Pager(
             config = PagingConfig(
                 pageSize = 30,
@@ -74,10 +75,10 @@ class MessageViewModel @Inject constructor(
     suspend fun getMessageById(messageId: Long): MessageEntity? {
         return repo.getMessageById(messageId)
     }
-
+    /*
     fun deleteMessages(ids: List<Long>) = viewModelScope.launch {
         repo.deleteMessages(ids)
-    }
+    }*/
 
     fun copyMessagesToClipboard(ids: List<Long>, context: Context) {
         viewModelScope.launch {
@@ -87,4 +88,20 @@ class MessageViewModel @Inject constructor(
             clipboard.setPrimaryClip(clip)
         }
     }
+
+    fun logMessagesForConversation(conversationId: Long) {
+        viewModelScope.launch {
+            val messages = repo.getAllMessagesForConversation(conversationId)
+            println("DEBUG: Nombre de messages pour convId=$conversationId : ${messages.size}")
+            messages.forEach { println("DEBUG: Message = $it") }
+        }
+    }
+    fun logAllMessages() {
+        viewModelScope.launch {
+            val messages = repo.getAllMessages()
+            println("==== TOUS LES MESSAGES EN BASE ====")
+            messages.forEach { println(it) }
+        }
+    }
+
 }

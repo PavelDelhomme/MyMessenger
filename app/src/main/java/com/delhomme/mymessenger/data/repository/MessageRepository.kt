@@ -26,11 +26,14 @@ class MessageRepository(private val db: AppDatabase) {
         return db.messageDao().getMessageById(messageId)
     }
 
-    suspend fun deleteMessages(ids: List<Long>) {
-        db.messageDao().deleteMessages(ids)
-    }
-
     suspend fun getMessagesText(ids: List<Long>): List<String> {
         return db.messageDao().getMessagesText(ids)
+    }
+
+    suspend fun getAllMessagesForConversation(conversationId: Long): List<MessageEntity> {
+        return db.messageDao().getAllMessagesForConversation(conversationId)
+    }
+    suspend fun getAllMessages(): List<MessageEntity> {
+        return db.messageDao().getAllMessages()
     }
 }

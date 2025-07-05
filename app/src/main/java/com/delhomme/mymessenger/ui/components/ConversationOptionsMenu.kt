@@ -1,5 +1,5 @@
 package com.delhomme.mymessenger.ui.components
-
+/*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,3 +41,4 @@ fun ConversationOptionsMenu(
         }
     }
 }
+*/

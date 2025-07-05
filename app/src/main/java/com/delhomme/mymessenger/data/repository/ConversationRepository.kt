@@ -42,11 +42,6 @@ class ConversationRepository(private val db: AppDatabase) {
     suspend fun getEmptyConversations(): List<ConversationEntity> {
         return db.conversationDao().getAllConversations().filter { it.numberOfMessages == 0 }
     }
-
-    suspend fun deleteConversations(conversations: List<ConversationEntity>) {
-        db.conversationDao().deleteConversations(conversations)
-    }
-
     suspend fun initializeConversations(context: Context) {
         withContext(Dispatchers.IO) {
             // 1. Charger totues les conversations existantes
@@ -147,6 +142,10 @@ class ConversationRepository(private val db: AppDatabase) {
         return smsMap
     }
 
+    suspend fun cleanEmptyConversation(conversations: List<ConversationEntity>) {
+        db.conversationDao().deleteConversations(conversations)
+    }
+
     private data class SmsData(
         val id: Long,
         val address: String,
@@ -154,57 +153,4 @@ class ConversationRepository(private val db: AppDatabase) {
         val date: Long,
         val type: Int // 1=received, 2=sent
     )
-
-
-    suspend fun getArchivedConversations(): List<ConversationEntity> {
-        return db.conversationDao().getArchivedConversations()
-    }
-
-    suspend fun getPinnedConversations(): List<ConversationEntity> {
-        return db.conversationDao().getAllConversations().filter { it.isPinned }
-    }
-    suspend fun getBlockedConversations(): List<ConversationEntity> {
-        return db.conversationDao().getAllConversations().filter { it.isBlocked }
-    }
-
-    suspend fun archiveConversation(id: Long) {
-        db.conversationDao().updateConversationArchived(id, true)
-    }
-
-    suspend fun unarchiveConversation(id: Long) {
-        db.conversationDao().updateConversationArchived(id, false)
-    }
-
-    fun deleteConversation(id: Long) {
-        db.conversationDao().deleteConversationById(id)
-    }
-
-    suspend fun getMutedConversations(): List<ConversationEntity> {
-        return db.conversationDao().getAllConversations().filter { it.isMuted }
-    }
-
-    suspend fun blockConversation(id: Long) {
-        db.conversationDao().updateConversationBlocked(id, true)
-    }
-
-    suspend fun unblockConversation(id: Long) {
-        db.conversationDao().updateConversationBlocked(id, false)
-    }
-
-    suspend fun pinConversation(id: Long) {
-        db.conversationDao().updateConversationPinned(id, true)
-    }
-
-    suspend fun unpinConversation(id: Long) {
-        db.conversationDao().updateConversationPinned(id, false)
-    }
-
-    suspend fun muteConversation(id: Long) {
-        db.conversationDao().updateConversationMuted(id, true)
-    }
-
-    suspend fun unmuteConversation(id: Long) {
-        db.conversationDao().updateConversationMuted(id, false)
-    }
-
 }

@@ -12,7 +12,7 @@ class MessengerApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        if (EnergySettings.backgroundSync) {
+        /*if (EnergySettings.backgroundSync) {
             EnergyOptimizer.scheduleTask(
                 key = "message_sync",
                 interval = EnergySettings.syncFrequency * 60 * 1000L,
@@ -21,6 +21,6 @@ class MessengerApp : Application() {
                 // pas de synchronisation car déjà gérer par SyncService
                 //SyncService.startSync(this)
             }
-        }
+        }*/
     }
 }

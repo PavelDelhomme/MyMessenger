@@ -26,7 +26,7 @@ import com.delhomme.mymessenger.ui.components.ConversationAction
 import com.delhomme.mymessenger.ui.components.ConversationRow
 import com.delhomme.mymessenger.viewmodel.ConversationViewModel
 import kotlinx.coroutines.launch
-
+/*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveScreen(navController: NavController) {
@@ -77,3 +77,4 @@ fun ArchiveScreen(navController: NavController) {
         }
     }
 }
+*/
