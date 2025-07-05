@@ -34,7 +34,8 @@ import com.delhomme.mymessenger.utils.formatMessageDate
 @Composable
 fun MessageBubble(
     message: MessageEntity,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    repliedMessage: MessageEntity? = null
 ) {
     // Logging avec LaunchedEffect
     LaunchedEffect(message) {
@@ -84,6 +85,30 @@ fun MessageBubble(
                 tonalElevation = 2.dp
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
+                    // Carte de réponse si message cité
+                    repliedMessage?.let { replied ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Réponse à:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = textColor.copy(alpha = 0.7f)
+                                )
+                                Text(
+                                    text = replied.body.take(50) + if (replied.body.length > 50) "..." else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = textColor.copy(alpha = 0.8f),
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = message.body,
                         color = textColor

@@ -10,6 +10,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.delhomme.mymessenger.data.local.ConversationEntity
+import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.data.repository.ConversationRepository
 import com.delhomme.mymessenger.ui.components.ConversationAction
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -125,7 +126,7 @@ class ConversationViewModel @Inject constructor(
                     conversation?.phoneNumber?.let { phoneNumber ->
                         context?.let { ctx ->
                             val intent = Intent(Intent.ACTION_DIAL).apply {
-                                data = Uri.parse("tel:${phoneNumber}")
+                                data = Uri.parse("tel:$phoneNumber")
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                             }
                             ctx.startActivity(intent)
@@ -136,4 +137,13 @@ class ConversationViewModel @Inject constructor(
             }
         }
     }
+
+    fun getMessages(conversationId: Long): Flow<PagingData<MessageEntity>> {
+        return Pager(
+            config = PagingConfig(pageSize = 30, enablePlaceholders = false)
+        ) {
+            repo.getMessagesByConversationPaging(conversationId)
+        }.flow.cachedIn(viewModelScope)
+    }
+
 }

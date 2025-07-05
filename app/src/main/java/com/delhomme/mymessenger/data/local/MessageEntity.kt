@@ -13,5 +13,5 @@ data class MessageEntity(
     val isMe: Boolean,
     val type: String, // "sms" ou "mms"
     val status: String = "DELIVERED",
-    val replyToId: Long? = null, // ID du message de réponse
+    val replyToId: Long? = null
 )

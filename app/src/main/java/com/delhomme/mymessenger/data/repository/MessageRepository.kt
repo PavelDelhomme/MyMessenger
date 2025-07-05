@@ -1,5 +1,5 @@
 package com.delhomme.mymessenger.data.repository
-import androidx.paging.PagingConfig
+
 import androidx.paging.PagingSource
 import com.delhomme.mymessenger.data.local.AppDatabase
 import com.delhomme.mymessenger.data.local.MessageEntity

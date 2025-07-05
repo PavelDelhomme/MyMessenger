@@ -66,7 +66,12 @@ fun ArchiveScreen(navController: NavController) {
                             else -> {}
                         }
                     },
-                    onClick = { /* ... */ }
+                    onClick = {
+                        // Correction 3: Navigation vers la conversation
+                        navController.navigate("messages/${conv.id}")
+                    },
+                    onLongClick = { viewModel.selectedConversations.add(conv.id) },
+                    isSelected = viewModel.selectedConversations.contains(conv.id),
                 )
             }
         }

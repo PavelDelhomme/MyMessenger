@@ -50,7 +50,9 @@ import kotlin.math.roundToInt
 @Composable
 fun ConversationRow(
     conversation: ConversationEntity,
+    isSelected: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onAction: (ConversationAction) -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -72,6 +74,8 @@ fun ConversationRow(
     val swipeState = rememberSwipeableState(initialValue = 0)
     val swipeAnchors = mapOf(0f to 0, -150f to -1, 150f to 1)
     val coroutineScope = rememberCoroutineScope()
+
+    val background = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
 
 
     SwipeToDismissBox(
@@ -132,7 +136,7 @@ fun ConversationRow(
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface
+                            //color = MaterialTheme.colorScheme.onSurface
                         )
 
                         if (conversation.isPinned) {
@@ -141,12 +145,11 @@ fun ConversationRow(
                                 contentDescription = "Épinglé",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(16.dp)
                                     .padding(start = 4.dp)
                             )
                         }
                     }
-
                     Text(
                         text = conversation.lastMessage,
                         style = MaterialTheme.typography.bodySmall,
@@ -156,9 +159,7 @@ fun ConversationRow(
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = formatConversationDate(conversation.lastDate),
                         style = MaterialTheme.typography.labelSmall
@@ -168,9 +169,8 @@ fun ConversationRow(
                         Box(
                             modifier = Modifier
                                 .padding(top = 4.dp)
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .size(20.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
