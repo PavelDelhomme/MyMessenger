@@ -16,7 +16,7 @@ interface MessageDao {
     suspend fun insertMessages(messages: List<MessageEntity>)
 
     @Query("UPDATE messages SET status = :status WHERE id = :id")
-    suspend fun updateMessageStatus(id: Long, status: String)
+    fun updateMessageStatus(id: Long, status: String)
 
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY date DESC")
     fun getMessagesByConversationPaging(conversationId: Long): PagingSource<Int, MessageEntity>

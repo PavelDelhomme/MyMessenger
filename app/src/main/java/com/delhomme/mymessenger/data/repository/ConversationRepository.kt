@@ -1,6 +1,7 @@
 package com.delhomme.mymessenger.data.repository
 
 import android.content.Context
+import android.net.Uri
 import android.provider.Telephony
 import androidx.paging.PagingSource
 import com.delhomme.mymessenger.data.local.AppDatabase
@@ -44,61 +45,72 @@ class ConversationRepository(private val db: AppDatabase) {
     }
     suspend fun initializeConversations(context: Context) {
         withContext(Dispatchers.IO) {
-            // 1. Charger totues les conversations existantes
             val existingConversations = db.conversationDao().getAllConversations()
-
-            // 2. Charger les SMS du téléphone
             val smsMap = loadSmsFromDevice(context)
+            val mmsMap = loadMmsFromDevice(context)
 
-            // 3. Synchroniser avec la base
-            smsMap.forEach { (address, messages) ->
+            // Merge SMS et MMS par numéro
+            val allAddresses = (smsMap.keys + mmsMap.keys).toSet()
+            allAddresses.forEach { address ->
                 val normalizedPhone = normalizePhoneNumber(address)
-
-                // Trouver ou créer la conversation
                 var conversation = existingConversations.find { it.phoneNumber == normalizedPhone }
+
+                // Récupérer tous les messages (SMS + MMS)
+                val smsMessages = smsMap[address] ?: emptyList()
+                val mmsMessages = mmsMap[address] ?: emptyList()
+
+                val allMessages = (smsMessages.map {
+                    MessageEntity(
+                        id = it.id,
+                        conversationId = normalizedPhone.hashCode().toLong(),
+                        address = it.address,
+                        body = it.body,
+                        date = it.date,
+                        isMe = it.type == 2,
+                        type = "sms",
+                        status = if (it.type == 2) "SENT" else "DELIVERED"
+                    )
+                } + mmsMessages.map {
+                    MessageEntity(
+                        id = it.id,
+                        conversationId = normalizedPhone.hashCode().toLong(),
+                        address = it.address,
+                        body = it.body,
+                        date = it.date,
+                        isMe = it.box == 2, // 2 = sent
+                        type = "mms",
+                        status = if (it.box == 2) "SENT" else "DELIVERED"
+                    )
+                }).sortedBy { it.date }
+
                 if (conversation == null) {
                     val (name, photo) = lookupContact(context, address)
                     conversation = ConversationEntity(
                         id = normalizedPhone.hashCode().toLong(),
                         phoneNumber = normalizedPhone,
                         fullName = name ?: normalizedPhone,
-                        lastMessage = messages.firstOrNull()?.body ?: "",
-                        lastDate = messages.firstOrNull()?.date ?: System.currentTimeMillis(),
-                        numberOfMessages = messages.size,
+                        lastMessage = allMessages.lastOrNull()?.body ?: "",
+                        lastDate = allMessages.lastOrNull()?.date ?: System.currentTimeMillis(),
+                        numberOfMessages = allMessages.size,
                         photoUri = photo
                     )
-
                     db.conversationDao().insertConversations(listOf(conversation))
                 } else {
-                    // Mettre à jour si nécessaire
-                    val lastMessage = messages.maxByOrNull { it.date }
+                    val lastMessage = allMessages.maxByOrNull { it.date }
                     if (lastMessage != null && conversation.lastDate < lastMessage.date) {
                         conversation = conversation.copy(
                             lastMessage = lastMessage.body,
                             lastDate = lastMessage.date,
-                            numberOfMessages = conversation.numberOfMessages + messages.size
+                            numberOfMessages = allMessages.size
                         )
                         db.conversationDao().updateConversation(conversation)
                     }
                 }
-
-                // 4. Insérer les messages dans la base
-                val messageEntities = messages.map { sms ->
-                    MessageEntity(
-                        id = sms.id,
-                        conversationId = conversation.id,
-                        address = sms.address,
-                        body = sms.body,
-                        date = sms.date,
-                        isMe = sms.type == 2, // 2 = envoyé, 1 = reçu
-                        type = "sms",
-                        status = if (sms.type == 2) "SENT" else "DELIVERED"
-                    )
-                }
-                db.messageDao().insertMessages(messageEntities)
+                db.messageDao().insertMessages(allMessages)
             }
         }
     }
+
 
     private fun loadSmsFromDevice(context: Context): Map<String, List<SmsData>> {
         val uri = Telephony.Sms.CONTENT_URI
@@ -142,6 +154,64 @@ class ConversationRepository(private val db: AppDatabase) {
         return smsMap
     }
 
+    private fun loadMmsFromDevice(context: Context): Map<String, List<MmsData>> {
+        val mmsMap = mutableMapOf<String, MutableList<MmsData>>()
+        val uri = Telephony.Mms.CONTENT_URI
+        val projection = arrayOf(
+            Telephony.Mms._ID,
+            Telephony.Mms.DATE,
+            Telephony.Mms.MESSAGE_BOX
+        )
+
+        context.contentResolver.query(uri, projection, null, null, "${Telephony.Mms.DATE} DESC")?.use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(Telephony.Mms._ID)
+            val dateIndex = cursor.getColumnIndexOrThrow(Telephony.Mms.DATE)
+            val boxIndex = cursor.getColumnIndexOrThrow(Telephony.Mms.MESSAGE_BOX)
+
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idIndex)
+                val date = cursor.getLong(dateIndex) * 1000 // MMS date is in seconds
+                val box = cursor.getInt(boxIndex) // 1 = inbox, 2 = sent
+
+                // Récupérer l'adresse (expéditeur ou destinataire)
+                val addrUri = Uri.parse("content://mms/$id/addr")
+                val addrCursor = context.contentResolver.query(addrUri, arrayOf("address", "type"), null, null, null)
+                var address: String? = null
+                addrCursor?.use {
+                    while (it.moveToNext()) {
+                        val type = it.getInt(it.getColumnIndexOrThrow("type"))
+                        if (type == 137 || type == 151) { // 137 = sender, 151 = recipient
+                            address = it.getString(it.getColumnIndexOrThrow("address"))
+                            if (address != null && address != "insert-address-token") break
+                        }
+                    }
+                }
+
+                // Récupérer le texte du MMS
+                var body = ""
+                val partUri = Uri.parse("content://mms/$id/part")
+                val partCursor = context.contentResolver.query(partUri, null, null, null, null)
+                partCursor?.use {
+                    while (it.moveToNext()) {
+                        val ct = it.getString(it.getColumnIndexOrThrow("ct"))
+                        if (ct == "text/plain") {
+                            val partId = it.getString(it.getColumnIndexOrThrow("_id"))
+                            val inputStream = context.contentResolver.openInputStream(Uri.parse("content://mms/part/$partId"))
+                            body = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+                            break
+                        }
+                    }
+                }
+
+                if (!address.isNullOrBlank()) {
+                    val mmsData = MmsData(id, address!!, body, date, box)
+                    mmsMap.getOrPut(address!!) { mutableListOf() }.add(mmsData)
+                }
+            }
+        }
+        return mmsMap
+    }
+
     suspend fun cleanEmptyConversation(conversations: List<ConversationEntity>) {
         db.conversationDao().deleteConversations(conversations)
     }
@@ -152,5 +222,14 @@ class ConversationRepository(private val db: AppDatabase) {
         val body: String,
         val date: Long,
         val type: Int // 1=received, 2=sent
+    )
+
+
+    private data class MmsData(
+        val id: Long,
+        val address: String,
+        val body: String,
+        val date: Long,
+        val box: Int // 1=inbox, 2=sent
     )
 }

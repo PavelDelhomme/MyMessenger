@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.delhomme.mymessenger.ui.components.RequestSmsPermissions
 import com.delhomme.mymessenger.ui.navigation.AppNavigation
+import com.delhomme.mymessenger.ui.screen.permissions.MinimalPermissionsScreen
 import com.delhomme.mymessenger.ui.theme.MyMessengerTheme
 import com.delhomme.mymessenger.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,12 +23,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyMessengerTheme(darkTheme = isSystemInDarkTheme()) {
-                RequestSmsPermissions(
-                    content = { AppNavigation() },
-                    onPermissionsGranted = {
+                MinimalPermissionsScreen(
+                    onAllGranted = {
                         viewModel.initializeConversations(this@MainActivity)
                     }
-                )
+                ) {
+                    AppNavigation()
+                }
             }
         }
     }

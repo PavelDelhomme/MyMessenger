@@ -1,8 +1,11 @@
 package com.delhomme.mymessenger.utils
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import android.telephony.SmsManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 
 
@@ -104,4 +107,17 @@ fun normalizePhoneNumber(number: String): String {
             else -> "+$digits"
         }
     }
+}
+
+fun sendSms(context: Context, phoneNumber: String, message: String, messageId: Long) {
+    val smsManager = SmsManager.getDefault()
+
+    val sentIntent = PendingIntent.getBroadcast(
+        context, 0, Intent("SMS_SENT").putExtra("messageId", messageId), PendingIntent.FLAG_IMMUTABLE
+    )
+    val deliveredIntent = PendingIntent.getBroadcast(
+        context, 0, Intent("SMS_DELIVERED").putExtra("messageId", messageId), PendingIntent.FLAG_IMMUTABLE
+    )
+
+    smsManager.sendTextMessage(phoneNumber, null, message, sentIntent, deliveredIntent)
 }
