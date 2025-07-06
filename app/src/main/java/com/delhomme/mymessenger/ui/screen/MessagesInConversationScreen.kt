@@ -1,6 +1,8 @@
 package com.delhomme.mymessenger.ui.screen
 
 //import android.R.attr.key
+import android.Manifest
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +57,7 @@ import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
 //import com.delhomme.mymessenger.ui.components.MessageBubble
 import com.delhomme.mymessenger.ui.components.MessageItem
+import com.delhomme.mymessenger.ui.screen.permissions.WithPermission
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.formatMessageDate
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
@@ -204,7 +207,10 @@ fun MessagesInConversationScreen(
                 Row(
                     modifier = Modifier
                         .padding(8.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(24.dp)
+                        )
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -225,7 +231,7 @@ fun MessagesInConversationScreen(
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
-                    IconButton(
+                    /*IconButton(
                         onClick = {
                             // Envoyer le message
                             scope.launch {
@@ -257,6 +263,32 @@ fun MessagesInConversationScreen(
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
+                    }*/
+
+                    WithPermission(
+                        permission = Manifest.permission.SEND_SMS,
+                        onAction = {
+                            // Envoyer le SMS
+                            if (messageText.isNotBlank()) {
+                                viewModel.sendMessage(
+                                    conversationId = conversationId!!,
+                                    phoneNumber = addrParam,
+                                    replyToId = replyToMessage?.id,
+                                    text = messageText
+                                )
+                                messageText = ""
+                            }
+                        },
+                        onPermissionDenied = {
+                            Toast.makeText(context, "Permission SMS requise pour envoyer", Toast.LENGTH_SHORT).show()
+                        }
+                    ) { requestPermission ->
+                        Button(
+                            onClick = { requestPermission() },
+                            enabled = messageText.isNotBlank()
+                        ) {
+                            Text("Envoyer")
+                        }
                     }
                 }
             }

@@ -28,6 +28,9 @@ import javax.inject.Inject
 class ConversationViewModel @Inject constructor(
     private val repo: ConversationRepository
 ) : ViewModel() {
+
+    @Inject
+    lateinit var conversationRepository: ConversationRepository
     private val _search = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _search
 
@@ -97,6 +100,13 @@ class ConversationViewModel @Inject constructor(
         viewModelScope.launch {
             val emptyConvs = repo.getEmptyConversations()
             repo.cleanEmptyConversation(emptyConvs)
+        }
+    }
+
+
+    fun initializeConversations(context: Context) {
+        viewModelScope.launch {
+            conversationRepository.initializeConversations(context)
         }
     }
 

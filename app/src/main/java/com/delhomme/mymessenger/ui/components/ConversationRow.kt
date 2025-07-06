@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -39,7 +40,9 @@ import androidx.wear.compose.material.FractionalThreshold
 import androidx.wear.compose.material.rememberSwipeableState
 import androidx.wear.compose.material.swipeable
 import com.delhomme.mymessenger.R
+import android.Manifest
 import com.delhomme.mymessenger.data.local.ConversationEntity
+import com.delhomme.mymessenger.ui.screen.permissions.WithPermission
 import com.delhomme.mymessenger.utils.formatConversationDate
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.normalizePhoneNumber
@@ -55,6 +58,8 @@ fun ConversationRow(
     onLongClick: () -> Unit,
     onAction: (ConversationAction) -> Unit
 ) {
+    val context = LocalContext.current
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
@@ -108,76 +113,91 @@ fun ConversationRow(
                 )
             }
         },
+
         content = {
-            // Contenu principal de la ligne de conversation
-            Row(
-                modifier = Modifier
-                    .offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
-                    .background(MaterialTheme.colorScheme.surface)
-                    .clickable { onClick() }
-                    .padding(8.dp)
-                    .height(56.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ContactAvatar(
-                    name = conversation.fullName.takeIf { it.isNotBlank() },
-                    photoUri = conversation.photoUri,
-                    modifier = Modifier.size(56.dp)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f)
+            // Ici on utilise WithPermission pour le contenu principal
+            WithPermission(
+                permission = Manifest.permission.READ_CONTACTS, // ← CORRECTION: android.Manifest
+                onAction = {
+                    // Permission accordée, on exécute l'action
+                    onClick()
+                },
+                onPermissionDenied = {
+                    // Permission refusée, on continue sans les détails du contact
+                    onClick()
+                }
+            ) { requestPermission ->
+                // Contenu principal de la ligne de conversation
+                Row(
+                    modifier = Modifier
+                        .offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
+                        .background(background)
+                        .clickable { requestPermission() } // ← Le clic demande la permission si nécessaire
+                        .padding(8.dp)
+                        .height(56.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    ContactAvatar(
+                        name = conversation.fullName.takeIf { it.isNotBlank() },
+                        photoUri = conversation.photoUri,
+                        modifier = Modifier.size(56.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = conversation.fullName.ifBlank {
+                                    normalizePhoneNumber(formatFrenchPhoneNumber(conversation.phoneNumber))
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+
+                            if (conversation.isPinned) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_pin),
+                                    contentDescription = "Épinglé",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .padding(start = 4.dp)
+                                )
+                            }
+                        }
                         Text(
-                            text = conversation.fullName.ifBlank { normalizePhoneNumber(formatFrenchPhoneNumber(conversation.phoneNumber)) },
-                            style = MaterialTheme.typography.titleMedium,
+                            text = conversation.lastMessage,
+                            style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            //color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatConversationDate(conversation.lastDate),
+                            style = MaterialTheme.typography.labelSmall
                         )
 
-                        if (conversation.isPinned) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_pin),
-                                contentDescription = "Épinglé",
-                                tint = MaterialTheme.colorScheme.primary,
+                        if (conversation.unreadCount > 0) {
+                            Box(
                                 modifier = Modifier
-                                    .size(16.dp)
-                                    .padding(start = 4.dp)
-                            )
-                        }
-                    }
-                    Text(
-                        text = conversation.lastMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = formatConversationDate(conversation.lastDate),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-
-                    if (conversation.unreadCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 4.dp)
-                                .size(20.dp)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = conversation.unreadCount.toString(),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                                    .padding(top = 4.dp)
+                                    .size(20.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = conversation.unreadCount.toString(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         }
                     }
                 }

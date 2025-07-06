@@ -18,9 +18,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.delhomme.mymessenger.utils.requestDefaultSmsApp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -28,22 +32,59 @@ fun MinimalPermissionsScreen(
     onAllGranted: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val permissions = listOf(
+    /*val permissions = listOf(
         Manifest.permission.READ_SMS,
         Manifest.permission.SEND_SMS,
         Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.RECEIVE_MMS,
+        Manifest.permission.RECEIVE_WAP_PUSH,
         Manifest.permission.READ_CONTACTS,
-        Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.POST_NOTIFICATIONS,
+        Manifest.permission.READ_PHONE_STATE,
+        Manifest.permission.READ_CALL_LOG,
+        Manifest.permission.READ_PHONE_NUMBERS,
+        // WRITE_SMS supprimé (n'existe plus)
+        // BROADCAST_SMS supprimé (permission système)
+        // BROADCAST_WAP_PUSH non demandé (permission protégée)
+    )*/
+
+    // Demande des permissions critiques
+    val criticalPermissions = listOf(
+        Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.RECEIVE_MMS,
+        Manifest.permission.RECEIVE_WAP_PUSH
     )
-    val permissionState = rememberMultiplePermissionsState(permissions)
+
+    val permissionState = rememberMultiplePermissionsState(criticalPermissions)
     val context = LocalContext.current
     val activity = context as? Activity
     var isDefaultSmsApp by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(permissionState.allPermissionsGranted) {
-        if (permissionState.allPermissionsGranted) {
+    // ✅ CORRECTION : Vérification immédiate au retour de l'activité
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            // Vérification immédiate quand l'activité reprend
             val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
-            isDefaultSmsApp = defaultSmsApp == context.packageName
+            val newStatus = defaultSmsApp == context.packageName
+            if (newStatus != isDefaultSmsApp) {
+                isDefaultSmsApp = newStatus
+                Log.d("SMS", "SMS default status updated: $isDefaultSmsApp")
+            }
+
+            // Puis vérification continue
+            while (true) {
+                delay(1000)
+                val currentDefaultApp = Telephony.Sms.getDefaultSmsPackage(context)
+                val currentStatus = currentDefaultApp == context.packageName
+                if (currentStatus != isDefaultSmsApp) {
+                    isDefaultSmsApp = currentStatus
+                    Log.d("SMS", "SMS default status updated: $isDefaultSmsApp")
+                    if (isDefaultSmsApp) {
+                        break // Arrêter la boucle si on devient l'app par défaut
+                    }
+                }
+            }
         }
     }
 
@@ -59,6 +100,7 @@ fun MinimalPermissionsScreen(
                 Button(onClick = {
                     if (activity != null) {
                         Log.d("SMS", "Button clicked, Activity OK")
+                        Toast.makeText(context, "Sélectionnez votre application dans la liste", Toast.LENGTH_SHORT).show()
                         requestDefaultSmsApp(activity)
                     } else {
                         Log.e("SMS", "Activity is null!")
@@ -69,6 +111,7 @@ fun MinimalPermissionsScreen(
                 }
             }
         } else {
+            Log.d("SMS", "L'application est déjà définie comme SMS par défaut, onAllGranted")
             onAllGranted()
             content()
         }

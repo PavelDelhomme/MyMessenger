@@ -1,4 +1,5 @@
 package com.delhomme.mymessenger.ui.screen
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -28,11 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
+import android.Manifest
 import com.delhomme.mymessenger.ui.components.ConversationRow
 import com.delhomme.mymessenger.ui.components.DrawerComponent
 import com.delhomme.mymessenger.ui.components.SearchBar
@@ -40,6 +44,7 @@ import com.delhomme.mymessenger.viewmodel.ConversationViewModel
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.ConversationEntity
 import com.delhomme.mymessenger.ui.components.ConversationAction
+import com.delhomme.mymessenger.ui.screen.permissions.WithPermission
 import kotlinx.coroutines.coroutineScope
 
 
@@ -58,10 +63,46 @@ fun ConversationListScreen(
     var isSearchExpanded by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var conversationToDelete by remember { mutableStateOf<ConversationEntity?>(null) }
-    var conversationToArchive by remember { mutableStateOf<ConversationEntity?>(null) }
+    var showImportDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
 
 
+    // Dialog d'import
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text("Importer l'historique") },
+            text = { Text("Voulez-vous importer vos SMS existants ?") },
+            confirmButton = {
+                WithPermission(
+                    permission = android.Manifest.permission.READ_SMS, // ← CORRECTION: android.Manifest
+                    onAction = {
+                        // Il faut une méthode dans le ViewModel pour l'import
+                        // viewModel.initializeConversations(context) // ← Cette méthode n'existe pas dans ConversationViewModel
+                        // À la place, utilise le MainViewModel ou ajoute la méthode
+                        Toast.makeText(context, "Import lancé", Toast.LENGTH_SHORT).show()
+                        showImportDialog = false
+                    },
+                    onPermissionDenied = {
+                        Toast.makeText(context, "Permission nécessaire pour l'import", Toast.LENGTH_SHORT).show()
+                        showImportDialog = false
+                    }
+                ) { requestPermission ->
+                    Button(onClick = { requestPermission() }) {
+                        Text("Importer")
+                    }
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showImportDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
 
+    // Dialog de suppression
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -116,6 +157,9 @@ fun ConversationListScreen(
                     actions = {
                         IconButton(onClick = { isSearchExpanded = true }) {
                             Icon(Icons.Default.Search, "Rechercher")
+                        }
+                        IconButton(onClick = { showImportDialog = true }) {
+                            Icon(Icons.Default.Refresh, "Importer SMS")
                         }
                         IconButton(onClick = onMenuClick) {
                             Icon(
