@@ -13,14 +13,10 @@ import javax.inject.Singleton
 class SmsSender @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+
+    // Méthode pour envoyer un SMS simple
     fun sendSms(phoneNumber: String, message: String) {
         try {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                putExtra("address", phoneNumber)
-                putExtra("sms_body", message)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Envoyer le SMS"))
             val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 context.getSystemService(SmsManager::class.java)
             } else {
@@ -32,14 +28,29 @@ class SmsSender @Inject constructor(
         }
     }
 
-    fun sendMms(context: Context, phoneNumber: String, text: String, mediaUri: Uri) {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = context.contentResolver.getType(mediaUri) ?: "image/*"
-            putExtra("address", phoneNumber)
-            putExtra(Intent.EXTRA_STREAM, mediaUri)
-            putExtra("sms_body", text)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    // Méthode pour envoyer un MMS avec média
+    fun sendMms(phoneNumber: String, text: String, mediaUri: Uri) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = context.contentResolver.getType(mediaUri) ?: "image/*"
+                putExtra("address", phoneNumber)
+                putExtra(Intent.EXTRA_STREAM, mediaUri)
+                putExtra("sms_body", text)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Envoyer le MMS"))
+        } catch (e: Exception) {
+            throw e
         }
-        context.startActivity(Intent.createChooser(intent, "Envoyer le MMS"))
+    }
+
+    // Méthode overload pour compatibilité avec votre code existant
+    @Deprecated("Use sendSms(phoneNumber, message) or sendMms(phoneNumber, text, mediaUri)")
+    fun sendSms(phoneNumber: String, message: String, mediaUri: Uri) {
+        if (message.isNotBlank()) {
+            sendSms(phoneNumber, message)
+        }
+        sendMms(phoneNumber, message, mediaUri)
     }
 }

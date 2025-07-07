@@ -1,9 +1,10 @@
 package com.delhomme.mymessenger.ui.screen
 
-//import android.R.attr.key
 import android.Manifest
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-//import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,17 +56,13 @@ import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
-//import com.delhomme.mymessenger.ui.components.MessageBubble
 import com.delhomme.mymessenger.ui.components.MessageItem
 import com.delhomme.mymessenger.ui.screen.permissions.WithPermission
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.formatMessageDate
-import com.delhomme.mymessenger.utils.rememberMediaPicker
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
 import kotlinx.coroutines.launch
-//import okhttp3.Cache.Companion.key
 import java.net.URLDecoder
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,24 +78,14 @@ fun MessagesInConversationScreen(
     val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
     var attachmentUri by remember { mutableStateOf<Uri?>(null) }
 
-    val pickMedia = rememberMediaPicker { uri ->
+    // Media picker pour sélectionner des fichiers
+    val mediaPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
         attachmentUri = uri
     }
 
-    LaunchedEffect(messages) {
-        println("Type de messages : ${messages::class.qualifiedName}")
-    }
-    LaunchedEffect(Unit) {
-        viewModel.logAllMessages()
-    }
-
-    LaunchedEffect(conversationId) {
-        viewModel.logMessagesForConversation(conversationId)
-    }
-
-    //val conversationId = navController.currentBackStackEntry?.arguments?.getLong("conversationId")
     val context = LocalContext.current
-
     val scrollState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var messageText by remember { mutableStateOf("") }
@@ -120,12 +106,12 @@ fun MessagesInConversationScreen(
 
     LaunchedEffect(conversationId) {
         println("DEBUG: conversationId utilisé dans l'écran = $conversationId")
-        viewModel.logMessagesForConversation(conversationId!!)
+        viewModel.logMessagesForConversation(conversationId)
     }
 
     LaunchedEffect(Unit) {
         // Vérification que la conversation existe
-        val conversation = viewModel.getConversation(conversationId!!)
+        val conversation = viewModel.getConversation(conversationId)
         if (conversation == null) {
             navController.popBackStack()
         }
@@ -149,14 +135,14 @@ fun MessagesInConversationScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(displayName, color = Color.White) },
+                title = { Text(displayName) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Recherche dans la conversation */ }) {
+                    IconButton(onClick = { isSearchActive = !isSearchActive }) {
                         Icon(Icons.Filled.Search, "Rechercher")
                     }
                     IconButton(onClick = { showOptions = true }) {
@@ -168,19 +154,31 @@ fun MessagesInConversationScreen(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Détails") },
-                            onClick = { /* Naviguer vers les détails de la conversation */ }
+                            onClick = {
+                                showOptions = false
+                                /* Naviguer vers les détails de la conversation */
+                            }
                         )
                         DropdownMenuItem(
                             text = { Text("Médias") },
-                            onClick = { /* Naviguer vers les médias */ }
+                            onClick = {
+                                showOptions = false
+                                /* Naviguer vers les médias */
+                            }
                         )
                         DropdownMenuItem(
                             text = { Text("Notifications") },
-                            onClick = { /* Gérer les notifications */ }
+                            onClick = {
+                                showOptions = false
+                                /* Gérer les notifications */
+                            }
                         )
                         DropdownMenuItem(
                             text = { Text("Effacer") },
-                            onClick = { /* Effacer la conversation */ }
+                            onClick = {
+                                showOptions = false
+                                /* Effacer la conversation */
+                            }
                         )
                     }
                 }
@@ -191,8 +189,8 @@ fun MessagesInConversationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    //.imePadding() // Ajout important pour le clavier
             ) {
+                // Barre de réponse
                 if (replyToMessage != null) {
                     Row(
                         modifier = Modifier
@@ -202,15 +200,36 @@ fun MessagesInConversationScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = replyToMessage!!.body.take(50),
+                            text = "Réponse à: ${replyToMessage!!.body.take(50)}${if (replyToMessage!!.body.length > 50) "..." else ""}",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(onClick = { replyToMessage = null}) {
+                        IconButton(onClick = { replyToMessage = null }) {
                             Icon(Icons.Filled.Close, "Annuler la réponse")
                         }
                     }
                 }
+
+                // Prévisualisation de l'attachement
+                if (attachmentUri != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Fichier sélectionné",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { attachmentUri = null }) {
+                            Icon(Icons.Filled.Close, "Supprimer l'attachement")
+                        }
+                    }
+                }
+
                 // Barre de saisie du message
                 Row(
                     modifier = Modifier
@@ -222,15 +241,18 @@ fun MessagesInConversationScreen(
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = pickMedia) {
+                    IconButton(onClick = {
+                        mediaPickerLauncher.launch("*/*")
+                    }) {
                         Icon(Icons.Filled.AddCircle, "Pièce jointe")
                     }
+
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 8.dp, bottom = 0.dp),
+                            .padding(end = 8.dp),
                         placeholder = { Text("Message...") },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -239,136 +261,200 @@ fun MessagesInConversationScreen(
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
-                    /*IconButton(
-                        onClick = {
-                            // Envoyer le message
-                            scope.launch {
-                                viewModel.sendMessage(
-                                    conversationId = conversationId!!,
-                                    text = messageText,
-                                    phoneNumber = addrParam,
-                                    replyToId = replyToMessage?.id
-                                )
-                            }
-                            messageText = ""
-                            replyToMessage = null
-                            // Rafraîchir manuellement les messages
-                            scope.launch {
-                                messages.refresh()
-                                scrollState.animateScrollToItem(0)
-                            }
-                        },
-                        modifier = Modifier
-                            .background(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape
-                            )
-                            .size(48.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_send),
-                            contentDescription = "Envoyer",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }*/
 
                     WithPermission(
                         permission = Manifest.permission.SEND_SMS,
                         onAction = {
-                            // Envoyer le SMS
-                            if (messageText.isNotBlank() && attachmentUri == null) return@WithPermission
-                            viewModel.sendMessage(
-                                context = context,
-                                conversationId = conversationId!!,
-                                phoneNumber = addrParam,
-                                replyToId = replyToMessage?.id,
-                                text = messageText
-                            )
-                            messageText = ""
-                            attachmentUri = null
+                            if (messageText.isNotBlank()) {
+                                scope.launch {
+                                    try {
+                                        // Si on a un attachement, envoyer un MMS
+                                        if (attachmentUri != null) {
+                                            viewModel.sendMmsMessage(
+                                                conversationId = conversationId,
+                                                text = messageText,
+                                                phoneNumber = addrParam,
+                                                mediaUri = attachmentUri!!,
+                                                replyToId = replyToMessage?.id
+                                            )
+                                        } else {
+                                            // Sinon envoyer un SMS
+                                            viewModel.sendMessage(
+                                                conversationId = conversationId,
+                                                text = messageText,
+                                                phoneNumber = addrParam,
+                                                replyToId = replyToMessage?.id
+                                            )
+                                        }
+
+                                        // Reset après envoi
+                                        messageText = ""
+                                        attachmentUri = null
+                                        replyToMessage = null
+
+                                        // Faire défiler vers le bas
+                                        messages.refresh()
+                                        scrollState.animateScrollToItem(0)
+
+                                    } catch (e: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            "Erreur lors de l'envoi: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
                         },
                         onPermissionDenied = {
-                            Toast.makeText(context, "Permission SMS requise pour envoyer", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Permission SMS requise pour envoyer",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     ) { requestPermission ->
-                        Button(
+                        IconButton(
                             onClick = { requestPermission() },
-                            enabled = messageText.isNotBlank()
+                            enabled = messageText.isNotBlank(),
+                            modifier = Modifier
+                                .background(
+                                    color = if (messageText.isNotBlank())
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = CircleShape
+                                )
+                                .size(48.dp)
                         ) {
-                            Text("Envoyer")
+                            Icon(
+                                painter = painterResource(R.drawable.ic_send),
+                                contentDescription = "Envoyer",
+                                tint = if (messageText.isNotBlank())
+                                    MaterialTheme.colorScheme.onPrimary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
                 }
             }
         }
-    ) {
-        innerPadding ->
-        LazyColumn(
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
-            //reverseLayout = true,
-            state = scrollState,
-
+                .fillMaxSize()
         ) {
-            if (filteredMessages.isEmpty()) {
-                item {
-                    Text("Aucun message à afficher", modifier = Modifier.padding(16.dp))
-                    Text("conversationId: $conversationId")
-                }
-            } else {
-                items(filteredMessages.size) { index ->
-                    val message = filteredMessages[index]
-                    // Charger le message cité si besoin
-                    var repliedMessage by remember { mutableStateOf<MessageEntity?>(null) }
-                    LaunchedEffect(message.replyToId) {
-                        repliedMessage = message.replyToId?.let { viewModel.getMessageById(it) }
+            // Barre de recherche
+            if (isSearchActive) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    placeholder = { Text("Rechercher dans la conversation...") },
+                    leadingIcon = {
+                        Icon(Icons.Filled.Search, "Rechercher")
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            searchQuery = ""
+                        }) {
+                            Icon(Icons.Filled.Close, "Fermer")
+                        }
                     }
-                    MessageItem(
-                        message = message,
-                        isSelected = selectedMessages.contains(message.id),
-                        onLongClick = {
-                            if (selectedMessages.contains(message.id)) selectedMessages.remove(
-                                message.id
-                            )
-                            else selectedMessages.add(message.id)
-                        },
-                        onClick = {
-                            if (selectedMessages.isNotEmpty()) {
-                                // En mode sélection multiple, clic ajoute/enlève
-                                if (selectedMessages.contains(message.id)) selectedMessages.remove(
-                                    message.id
-                                )
-                                else selectedMessages.add(message.id)
-                            } else {
-                                // Sinon, afficher menu contextuel
-                                showMenuForMessageId = message.id
+                )
+            }
+
+            // Liste des messages
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                state = scrollState,
+                reverseLayout = true
+            ) {
+                if (filteredMessages.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Aucun message à afficher")
+                            Text("ID conversation: $conversationId", style = MaterialTheme.typography.bodySmall)
+                            Text("Nombre de messages: ${messages.itemCount}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                } else {
+                    items(filteredMessages.size) { index ->
+                        val message = filteredMessages[index]
+                        if (message != null) {
+                            // Charger le message cité si besoin
+                            var repliedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+                            LaunchedEffect(message.replyToId) {
+                                repliedMessage = message.replyToId?.let { viewModel.getMessageById(it) }
                             }
-                        },
-                        showMenu = showMenuForMessageId == message.id,
-                        onMenuDismiss = { showMenuForMessageId = null },
-                        onCopy = { /* copier message.body dans clipboard */ },
-                        onDelete = { /* supprimer message */ },
-                        onForward = { /* transférer message */ },
-                        onReply = {
-                            replyToMessage = message
-                            showMenuForMessageId = null
-                        },
-                        repliedMessage = repliedMessage
-                    )
+
+                            MessageItem(
+                                message = message,
+                                isSelected = selectedMessages.contains(message.id),
+                                onLongClick = {
+                                    if (selectedMessages.contains(message.id)) {
+                                        selectedMessages.remove(message.id)
+                                    } else {
+                                        selectedMessages.add(message.id)
+                                    }
+                                },
+                                onClick = {
+                                    if (selectedMessages.isNotEmpty()) {
+                                        // En mode sélection multiple
+                                        if (selectedMessages.contains(message.id)) {
+                                            selectedMessages.remove(message.id)
+                                        } else {
+                                            selectedMessages.add(message.id)
+                                        }
+                                    } else {
+                                        // Afficher menu contextuel
+                                        showMenuForMessageId = message.id
+                                    }
+                                },
+                                showMenu = showMenuForMessageId == message.id,
+                                onMenuDismiss = { showMenuForMessageId = null },
+                                onCopy = {
+                                    viewModel.copyMessagesToClipboard(listOf(message.id), context)
+                                    Toast.makeText(context, "Message copié", Toast.LENGTH_SHORT).show()
+                                },
+                                onDelete = {
+                                    // TODO: Implémenter la suppression
+                                    Toast.makeText(context, "Suppression à implémenter", Toast.LENGTH_SHORT).show()
+                                },
+                                onForward = {
+                                    // TODO: Implémenter le transfert
+                                    Toast.makeText(context, "Transfert à implémenter", Toast.LENGTH_SHORT).show()
+                                },
+                                onReply = {
+                                    replyToMessage = message
+                                    showMenuForMessageId = null
+                                },
+                                repliedMessage = repliedMessage
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    Text("Messages chargés : ${messages.itemCount}")
-    // Afficher la date complète au clic
+    // Dialog de détails du message
     if (showDatePicker && selectedMessage != null) {
         AlertDialog(
             onDismissRequest = { showDatePicker = false },
             title = { Text("Détails du message") },
-            text = { Text("Date complète: ${formatMessageDate(selectedMessage!!.date, full = true)}") },
+            text = {
+                Text("Date complète: ${formatMessageDate(selectedMessage!!.date, full = true)}")
+            },
             confirmButton = {
                 Button(onClick = { showDatePicker = false }) {
                     Text("OK")

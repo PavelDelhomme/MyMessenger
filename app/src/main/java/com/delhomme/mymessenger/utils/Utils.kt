@@ -137,33 +137,3 @@ fun mediaPermission(): String =
         Manifest.permission.READ_MEDIA_IMAGES   // Android 13+
     else
         Manifest.permission.READ_EXTERNAL_STORAGE
-
-
-@Composable
-fun rememberMediaPicker(onUri: (Uri) -> Unit): () -> Unit {
-    val context = LocalContext.current
-
-    val pickVisual = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri -> uri?.let(onUri) }
-
-    val requestPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) pickVisual.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-        )
-        else Toast.makeText(context, "Permission médias refusée", Toast.LENGTH_SHORT).show()
-    }
-
-    return {
-        val perm = mediaPermission()
-        if (ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED) {
-            pickVisual.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-            )
-        } else {
-            requestPermission.launch(perm)
-        }
-    }
-}

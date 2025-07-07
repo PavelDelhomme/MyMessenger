@@ -39,37 +39,111 @@ class MessageViewModel @Inject constructor(
         }.flow.cachedIn(viewModelScope)
     }
 
-    fun sendMessage(context: Context,conversationId: Long, text: String, phoneNumber: String, mediaUri: Uri? = null, replyToId: Long? = null) {
+    // Méthode pour envoyer un SMS simple
+    fun sendMessage(conversationId: Long, text: String, phoneNumber: String, replyToId: Long? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            val now = System.currentTimeMillis()
-            // Créer le message local avec replyToId
-            val message = MessageEntity(
-                id = now,
-                conversationId = conversationId,
-                address = "Me",
-                body = text,
-                date = now,
-                isMe = true,
-                type = if (mediaUri == null) "sms" else "mms",
-                status = "SENDING",
-                mediaUri = mediaUri?.toString(),
-                replyToId = replyToId // <- Ajout du replyToId
-            )
+            try {
+                // Créer le message local avec replyToId
+                val message = MessageEntity(
+                    id = System.currentTimeMillis(),
+                    conversationId = conversationId,
+                    address = "Me",
+                    body = text,
+                    date = System.currentTimeMillis(),
+                    isMe = true,
+                    type = "sms",
+                    status = "SENDING",
+                    replyToId = replyToId
+                )
 
-            // Insérer dans la base
-            repo.insertMessages(listOf(message))
+                // Insérer dans la base
+                repo.insertMessages(listOf(message))
 
-            // Mettre à jour la conversation
-            conversationRepo.updateConversationLastMessage(
-                conversationId = conversationId,
-                lastMessage = text,
-                lastDate = System.currentTimeMillis()
-            )
+                // Mettre à jour la conversation
+                conversationRepo.updateConversationLastMessage(
+                    conversationId = conversationId,
+                    lastMessage = text,
+                    lastDate = System.currentTimeMillis()
+                )
 
-            if (mediaUri != null) {
+                // Envoi réel du SMS (en arrière-plan)
                 smsSender.sendSms(phoneNumber, text)
-            } else {
-                smsSender.sendMms(context, phoneNumber, text, mediaUri!!)
+
+                // Mettre à jour le statut à "SENT" si l'envoi réussit
+                repo.updateMessageStatus(message.id, "SENT")
+
+            } catch (e: Exception) {
+                // En cas d'erreur, marquer le message comme "FAILED"
+                val failedMessage = MessageEntity(
+                    id = System.currentTimeMillis(),
+                    conversationId = conversationId,
+                    address = "Me",
+                    body = text,
+                    date = System.currentTimeMillis(),
+                    isMe = true,
+                    type = "sms",
+                    status = "FAILED",
+                    replyToId = replyToId
+                )
+                repo.insertMessages(listOf(failedMessage))
+            }
+        }
+    }
+
+
+    // Méthode pour envoyer un MMS avec média
+    fun sendMmsMessage(
+        conversationId: Long,
+        text: String,
+        phoneNumber: String,
+        mediaUri: Uri,
+        replyToId: Long? = null
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Créer le message local
+                val message = MessageEntity(
+                    id = System.currentTimeMillis(),
+                    conversationId = conversationId,
+                    address = "Me",
+                    body = text,
+                    date = System.currentTimeMillis(),
+                    isMe = true,
+                    type = "mms",
+                    status = "SENDING",
+                    replyToId = replyToId
+                )
+
+                // Insérer dans la base
+                repo.insertMessages(listOf(message))
+
+                // Mettre à jour la conversation
+                conversationRepo.updateConversationLastMessage(
+                    conversationId = conversationId,
+                    lastMessage = text,
+                    lastDate = System.currentTimeMillis()
+                )
+
+                // Envoi réel du MMS
+                smsSender.sendMms(phoneNumber, text, mediaUri)
+
+                // Mettre à jour le statut
+                repo.updateMessageStatus(message.id, "SENT")
+
+            } catch (e: Exception) {
+                // En cas d'erreur, marquer comme "FAILED"
+                val failedMessage = MessageEntity(
+                    id = System.currentTimeMillis(),
+                    conversationId = conversationId,
+                    address = "Me",
+                    body = text,
+                    date = System.currentTimeMillis(),
+                    isMe = true,
+                    type = "mms",
+                    status = "FAILED",
+                    replyToId = replyToId
+                )
+                repo.insertMessages(listOf(failedMessage))
             }
         }
     }
@@ -81,10 +155,6 @@ class MessageViewModel @Inject constructor(
     suspend fun getMessageById(messageId: Long): MessageEntity? {
         return repo.getMessageById(messageId)
     }
-    /*
-    fun deleteMessages(ids: List<Long>) = viewModelScope.launch {
-        repo.deleteMessages(ids)
-    }*/
 
     fun copyMessagesToClipboard(ids: List<Long>, context: Context) {
         viewModelScope.launch {

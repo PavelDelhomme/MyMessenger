@@ -47,8 +47,7 @@ fun MinimalPermissionsScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     var isDefaultSmsApp by remember { mutableStateOf(false) }
-
-    //val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // 1. Demande toutes les permissions d'abord
     LaunchedEffect(Unit) {
@@ -56,35 +55,94 @@ fun MinimalPermissionsScreen(
             permissionState.launchMultiplePermissionRequest()
         }
     }
+    // 2. Vérification continue du statut SMS par défaut quand l'activité est active
+    LaunchedEffect(permissionState.allPermissionsGranted, lifecycleOwner) {
+        if (permissionState.allPermissionsGranted) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
+                    val currentStatus = defaultSmsApp == context.packageName
 
-    // Vérifier le statut SMS  par défaut dès que toutes les permissions sont accordées
+                    if (currentStatus != isDefaultSmsApp) {
+                        isDefaultSmsApp = currentStatus
+                        Log.d("SMS_STATUS", "SMS default status updated: $isDefaultSmsApp")
+
+                        if (isDefaultSmsApp) {
+                            Log.d("SMS_STATUS", "App is now default SMS app, calling onAllGranted")
+                            break // Sortir de la boucle quand on devient l'app par défaut
+                        }
+                    }
+
+                    delay(500) // Vérifier toutes les 500ms
+                }
+            }
+        }
+    }
+
+
+    // 3. Vérification initiale du statut
     LaunchedEffect(permissionState.allPermissionsGranted) {
         if (permissionState.allPermissionsGranted) {
             val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
             isDefaultSmsApp = defaultSmsApp == context.packageName
+            Log.d("SMS_STATUS", "Initial SMS status check: $isDefaultSmsApp")
         }
     }
 
-    if (!permissionState.allPermissionsGranted) {
-        // Tant que toutes les permissions ne sont pas accordées, affiche ce message
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("L'application a besoin d'autorisations pour fonctionner.")
-        }
-    } else if (!isDefaultSmsApp) {
-        // Quand toutes les permissions sont OK, propose le bouton pour devenir app SMS par défaut
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Button(onClick = {
-                activity?.let {
-                    requestDefaultSmsApp(it)
-                }
-            }) {
-                Text("Définir comme application SMS par défaut")
+
+    // 4. Logique d'affichage
+    when {
+        !permissionState.allPermissionsGranted -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("L'application a besoin d'autorisations pour fonctionner.")
             }
         }
-    } else {
-        // Quand tout est bon, affiche le contenu principal
-        onAllGranted()
-        content()
+
+        !isDefaultSmsApp -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Button(onClick = {
+                    activity?.let {
+                        Log.d("SMS_STATUS", "Requesting default SMS app status")
+                        requestDefaultSmsApp(it)
+                    }
+                }) {
+                    Text("Définir comme application SMS par défaut")
+                }
+            }
+        }
+
+        else -> {
+            Log.d("SMS_STATUS", "All permissions granted and is default SMS app")
+            onAllGranted()
+            content()
+        }
+    }
+    // 4. Logique d'affichage
+    when {
+        !permissionState.allPermissionsGranted -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("L'application a besoin d'autorisations pour fonctionner.")
+            }
+        }
+
+        !isDefaultSmsApp -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Button(onClick = {
+                    activity?.let {
+                        Log.d("SMS_STATUS", "Requesting default SMS app status")
+                        requestDefaultSmsApp(it)
+                    }
+                }) {
+                    Text("Définir comme application SMS par défaut")
+                }
+            }
+        }
+
+        else -> {
+            Log.d("SMS_STATUS", "All permissions granted and is default SMS app")
+            onAllGranted()
+            content()
+        }
     }
 
     // ✅ CORRECTION : Vérification immédiate au retour de l'activité
