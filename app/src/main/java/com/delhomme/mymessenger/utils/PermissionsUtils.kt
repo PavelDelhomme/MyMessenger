@@ -3,6 +3,7 @@ package com.delhomme.mymessenger.utils
 import android.app.Activity
 import android.app.role.RoleManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Telephony
 import android.util.Log
@@ -23,7 +24,6 @@ fun requestDefaultSmsApp(activity: Activity) {
                 }
             } else {
                 Log.w("PERMISSIONS", "SMS role not available")
-                // Fallback vers l'ancienne méthode
                 fallbackToLegacyMethod(activity)
             }
         } else {
@@ -48,9 +48,43 @@ private fun fallbackToLegacyMethod(activity: Activity) {
     }
 }
 
+/**
+ * Vérifie si l'application est l'application SMS par défaut
+ * Utilise plusieurs méthodes pour être compatible avec toutes les versions Android
+ */
 fun isDefaultSmsApp(activity: Activity): Boolean {
-    val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(activity)
-    val isDefault = defaultSmsApp == activity.packageName
-    Log.d("PERMISSIONS", "Default SMS app check: $isDefault (current: $defaultSmsApp, ours: ${activity.packageName})")
-    return isDefault
+    return try {
+        // Méthode 1: Via RoleManager (Android 10+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = activity.getSystemService(RoleManager::class.java)
+            if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+                val isRoleHeld = roleManager.isRoleHeld(RoleManager.ROLE_SMS)
+                Log.d("PERMISSIONS", "RoleManager check: $isRoleHeld")
+                if (isRoleHeld) return true
+            }
+        }
+
+        // Méthode 2: Via Telephony.Sms.getDefaultSmsPackage
+        val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(activity)
+        val isDefault = defaultSmsApp == activity.packageName
+        Log.d("PERMISSIONS", "Telephony check: $isDefault (current: $defaultSmsApp, ours: ${activity.packageName})")
+
+        if (isDefault) return true
+
+        // Méthode 3: Vérification via PackageManager pour les permissions spéciales
+        val packageManager = activity.packageManager
+        val hasWriteSmsPermission = packageManager.checkPermission(
+            "android.permission.WRITE_SMS",
+            activity.packageName
+        ) == PackageManager.PERMISSION_GRANTED
+
+        Log.d("PERMISSIONS", "WRITE_SMS permission check: $hasWriteSmsPermission")
+
+        // Si on a la permission WRITE_SMS, on est probablement l'app par défaut
+        hasWriteSmsPermission
+
+    } catch (e: Exception) {
+        Log.e("PERMISSIONS", "Error checking default SMS app status", e)
+        false
+    }
 }
