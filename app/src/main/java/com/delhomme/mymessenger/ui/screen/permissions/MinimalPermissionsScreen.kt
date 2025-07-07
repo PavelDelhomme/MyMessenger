@@ -32,7 +32,7 @@ fun MinimalPermissionsScreen(
     onAllGranted: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    /*val permissions = listOf(
+    val permissions = listOf(
         Manifest.permission.READ_SMS,
         Manifest.permission.SEND_SMS,
         Manifest.permission.RECEIVE_SMS,
@@ -40,29 +40,55 @@ fun MinimalPermissionsScreen(
         Manifest.permission.RECEIVE_WAP_PUSH,
         Manifest.permission.READ_CONTACTS,
         Manifest.permission.POST_NOTIFICATIONS,
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CALL_LOG,
-        Manifest.permission.READ_PHONE_NUMBERS,
-        // WRITE_SMS supprimé (n'existe plus)
-        // BROADCAST_SMS supprimé (permission système)
-        // BROADCAST_WAP_PUSH non demandé (permission protégée)
-    )*/
-
-    // Demande des permissions critiques
-    val criticalPermissions = listOf(
-        Manifest.permission.RECEIVE_SMS,
-        Manifest.permission.RECEIVE_MMS,
-        Manifest.permission.RECEIVE_WAP_PUSH
+        Manifest.permission.READ_PHONE_STATE
     )
 
-    val permissionState = rememberMultiplePermissionsState(criticalPermissions)
+    val permissionState = rememberMultiplePermissionsState(permissions)
     val context = LocalContext.current
     val activity = context as? Activity
     var isDefaultSmsApp by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
+
+    //val lifecycleOwner = LocalLifecycleOwner.current
+
+    // 1. Demande toutes les permissions d'abord
+    LaunchedEffect(Unit) {
+        if (!permissionState.allPermissionsGranted) {
+            permissionState.launchMultiplePermissionRequest()
+        }
+    }
+
+    // Vérifier le statut SMS  par défaut dès que toutes les permissions sont accordées
+    LaunchedEffect(permissionState.allPermissionsGranted) {
+        if (permissionState.allPermissionsGranted) {
+            val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
+            isDefaultSmsApp = defaultSmsApp == context.packageName
+        }
+    }
+
+    if (!permissionState.allPermissionsGranted) {
+        // Tant que toutes les permissions ne sont pas accordées, affiche ce message
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("L'application a besoin d'autorisations pour fonctionner.")
+        }
+    } else if (!isDefaultSmsApp) {
+        // Quand toutes les permissions sont OK, propose le bouton pour devenir app SMS par défaut
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Button(onClick = {
+                activity?.let {
+                    requestDefaultSmsApp(it)
+                }
+            }) {
+                Text("Définir comme application SMS par défaut")
+            }
+        }
+    } else {
+        // Quand tout est bon, affiche le contenu principal
+        onAllGranted()
+        content()
+    }
 
     // ✅ CORRECTION : Vérification immédiate au retour de l'activité
-    LaunchedEffect(lifecycleOwner) {
+    /*LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             // Vérification immédiate quand l'activité reprend
             val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
@@ -119,5 +145,5 @@ fun MinimalPermissionsScreen(
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("L'application a besoin d'autorisations pour fonctionner.")
         }
-    }
+    }*/
 }

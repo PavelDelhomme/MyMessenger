@@ -118,14 +118,8 @@ fun ConversationRow(
             // Ici on utilise WithPermission pour le contenu principal
             WithPermission(
                 permission = Manifest.permission.READ_CONTACTS, // ← CORRECTION: android.Manifest
-                onAction = {
-                    // Permission accordée, on exécute l'action
-                    onClick()
-                },
-                onPermissionDenied = {
-                    // Permission refusée, on continue sans les détails du contact
-                    onClick()
-                }
+                onAction = { onClick() },
+                onPermissionDenied = { onClick() }
             ) { requestPermission ->
                 // Contenu principal de la ligne de conversation
                 Row(

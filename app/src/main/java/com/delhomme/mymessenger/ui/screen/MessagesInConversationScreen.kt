@@ -2,6 +2,7 @@ package com.delhomme.mymessenger.ui.screen
 
 //import android.R.attr.key
 import android.Manifest
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import com.delhomme.mymessenger.ui.components.MessageItem
 import com.delhomme.mymessenger.ui.screen.permissions.WithPermission
 import com.delhomme.mymessenger.utils.formatFrenchPhoneNumber
 import com.delhomme.mymessenger.utils.formatMessageDate
+import com.delhomme.mymessenger.utils.rememberMediaPicker
 import com.delhomme.mymessenger.viewmodel.MessageViewModel
 import kotlinx.coroutines.launch
 //import okhttp3.Cache.Companion.key
@@ -78,6 +80,12 @@ fun MessagesInConversationScreen(
     val addrParam = navController.currentBackStackEntry?.arguments?.getString("addr") ?: ""
 
     val messages = viewModel.getMessages(conversationId).collectAsLazyPagingItems()
+    var attachmentUri by remember { mutableStateOf<Uri?>(null) }
+
+    val pickMedia = rememberMediaPicker { uri ->
+        attachmentUri = uri
+    }
+
     LaunchedEffect(messages) {
         println("Type de messages : ${messages::class.qualifiedName}")
     }
@@ -214,7 +222,7 @@ fun MessagesInConversationScreen(
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { /* Ajouter pièce jointe */ }) {
+                    IconButton(onClick = pickMedia) {
                         Icon(Icons.Filled.AddCircle, "Pièce jointe")
                     }
                     TextField(
@@ -269,15 +277,16 @@ fun MessagesInConversationScreen(
                         permission = Manifest.permission.SEND_SMS,
                         onAction = {
                             // Envoyer le SMS
-                            if (messageText.isNotBlank()) {
-                                viewModel.sendMessage(
-                                    conversationId = conversationId!!,
-                                    phoneNumber = addrParam,
-                                    replyToId = replyToMessage?.id,
-                                    text = messageText
-                                )
-                                messageText = ""
-                            }
+                            if (messageText.isNotBlank() && attachmentUri == null) return@WithPermission
+                            viewModel.sendMessage(
+                                context = context,
+                                conversationId = conversationId!!,
+                                phoneNumber = addrParam,
+                                replyToId = replyToMessage?.id,
+                                text = messageText
+                            )
+                            messageText = ""
+                            attachmentUri = null
                         },
                         onPermissionDenied = {
                             Toast.makeText(context, "Permission SMS requise pour envoyer", Toast.LENGTH_SHORT).show()

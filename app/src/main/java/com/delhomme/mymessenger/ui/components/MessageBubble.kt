@@ -1,11 +1,13 @@
 package com.delhomme.mymessenger.ui.components
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,9 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.delhomme.mymessenger.R
 import com.delhomme.mymessenger.data.local.MessageEntity
 import com.delhomme.mymessenger.utils.formatMessageDate
@@ -113,6 +117,17 @@ fun MessageBubble(
                         text = message.body,
                         color = textColor
                     )
+                    if (message.mediaUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(message.mediaUri),
+                            contentDescription = "Pièce jointe",
+                            modifier = Modifier
+                                .size(180.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = formatMessageDate(message.date),

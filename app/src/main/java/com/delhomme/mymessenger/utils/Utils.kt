@@ -1,11 +1,21 @@
 package com.delhomme.mymessenger.utils
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.ContactsContract
 import android.telephony.SmsManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 
 
@@ -120,4 +130,40 @@ fun sendSms(context: Context, phoneNumber: String, message: String, messageId: L
     )
 
     smsManager.sendTextMessage(phoneNumber, null, message, sentIntent, deliveredIntent)
+}
+
+fun mediaPermission(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        Manifest.permission.READ_MEDIA_IMAGES   // Android 13+
+    else
+        Manifest.permission.READ_EXTERNAL_STORAGE
+
+
+@Composable
+fun rememberMediaPicker(onUri: (Uri) -> Unit): () -> Unit {
+    val context = LocalContext.current
+
+    val pickVisual = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> uri?.let(onUri) }
+
+    val requestPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) pickVisual.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+        )
+        else Toast.makeText(context, "Permission médias refusée", Toast.LENGTH_SHORT).show()
+    }
+
+    return {
+        val perm = mediaPermission()
+        if (ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED) {
+            pickVisual.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+            )
+        } else {
+            requestPermission.launch(perm)
+        }
+    }
 }

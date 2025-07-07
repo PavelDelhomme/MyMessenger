@@ -13,5 +13,6 @@ data class MessageEntity(
     val isMe: Boolean,
     val type: String, // "sms" ou "mms"
     val status: String = "DELIVERED",
+    val mediaUri: String? = null,
     val replyToId: Long? = null
 )

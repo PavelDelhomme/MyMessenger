@@ -3,6 +3,7 @@ package com.delhomme.mymessenger.viewmodel
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -38,18 +39,20 @@ class MessageViewModel @Inject constructor(
         }.flow.cachedIn(viewModelScope)
     }
 
-    fun sendMessage(conversationId: Long, text: String, phoneNumber: String, replyToId: Long? = null) {
+    fun sendMessage(context: Context,conversationId: Long, text: String, phoneNumber: String, mediaUri: Uri? = null, replyToId: Long? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
             // Créer le message local avec replyToId
             val message = MessageEntity(
-                id = System.currentTimeMillis(),
+                id = now,
                 conversationId = conversationId,
                 address = "Me",
                 body = text,
-                date = System.currentTimeMillis(),
+                date = now,
                 isMe = true,
-                type = "sms",
+                type = if (mediaUri == null) "sms" else "mms",
                 status = "SENDING",
+                mediaUri = mediaUri?.toString(),
                 replyToId = replyToId // <- Ajout du replyToId
             )
 
@@ -63,8 +66,11 @@ class MessageViewModel @Inject constructor(
                 lastDate = System.currentTimeMillis()
             )
 
-            // Envoi réel du SMS (en arrière-plan)
-            smsSender.sendSms(phoneNumber, text)
+            if (mediaUri != null) {
+                smsSender.sendSms(phoneNumber, text)
+            } else {
+                smsSender.sendMms(context, phoneNumber, text, mediaUri!!)
+            }
         }
     }
 
