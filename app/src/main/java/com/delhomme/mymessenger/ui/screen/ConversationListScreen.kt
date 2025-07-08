@@ -37,6 +37,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import android.Manifest
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 import com.delhomme.mymessenger.ui.components.ConversationRow
 import com.delhomme.mymessenger.ui.components.DrawerComponent
 import com.delhomme.mymessenger.ui.components.SearchBar
@@ -76,11 +78,9 @@ fun ConversationListScreen(
             text = { Text("Voulez-vous importer vos SMS existants ?") },
             confirmButton = {
                 WithPermission(
-                    permission = android.Manifest.permission.READ_SMS, // ← CORRECTION: android.Manifest
+                    permission = Manifest.permission.READ_SMS,
                     onAction = {
-                        // Il faut une méthode dans le ViewModel pour l'import
-                        // viewModel.initializeConversations(context) // ← Cette méthode n'existe pas dans ConversationViewModel
-                        // À la place, utilise le MainViewModel ou ajoute la méthode
+                        viewModel.initializeConversations(context)
                         Toast.makeText(context, "Import lancé", Toast.LENGTH_SHORT).show()
                         showImportDialog = false
                     },
@@ -128,11 +128,6 @@ fun ConversationListScreen(
 
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Filled.Add, "Ajouter une conversation")
-            }
-        },
         topBar = {
             if (isSearchExpanded) {
                 SearchBar(
@@ -146,10 +141,6 @@ fun ConversationListScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 2.dp),
                     onClose = { isSearchExpanded = false },
-                    /*drawerComponent = DrawerComponent(
-                        navController = navController,
-                        onClose = { isSearchExpanded = false }
-                    )*/
                 )
             } else {
                 TopAppBar(
@@ -171,12 +162,84 @@ fun ConversationListScreen(
                     }
                 )
             }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddClick,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Filled.Add, "Ajouter une conversation")
+            }
         }
+
     ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (conversations.itemCount == 0) {
+                // État vide
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Aucune conversation",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "Appuyez sur + pour commencer une nouvelle conversation",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            } else {
+                // Liste des conversations
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        count = conversations.itemCount,
+                        key = { index -> conversations[index]?.id ?: index }
+                    ) { index ->
+                        conversations[index]?.let { conv ->
+                            ConversationRow(
+                                conversation = conv,
+                                onAction = { action ->
+                                    when (action) {
+                                        ConversationAction.Delete -> {
+                                            conversationToDelete = conv
+                                            showDeleteDialog = true
+                                        }
+                                        else -> viewModel.handleAction(action, conv.id, context)
+                                    }
+                                },
+                                onClick = { onConversationClick(conv.id) },
+                                onLongClick = {
+                                    if (viewModel.selectedConversations.contains(conv.id)) {
+                                        viewModel.selectedConversations.remove(conv.id)
+                                    } else {
+                                        viewModel.selectedConversations.add(conv.id)
+                                    }
+                                },
+                                isSelected = viewModel.selectedConversations.contains(conv.id)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+/*    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(bottom = innerPadding.calculateBottomPadding())
-                .fillMaxSize()
                 .systemBarsPadding()
         ) {
             LazyColumn(
@@ -206,5 +269,5 @@ fun ConversationListScreen(
                 }
             }
         }
-    }
+    }*/
 }

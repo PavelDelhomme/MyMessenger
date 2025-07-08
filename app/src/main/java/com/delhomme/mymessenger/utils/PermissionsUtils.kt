@@ -23,3 +23,8 @@ fun requestDefaultSmsApp(activity: Activity) {
         activity.startActivity(intent)
     }
 }
+
+fun isDefaultSmsApp(context: Context): Boolean {
+    val roleManager = context.getSystemService(RoleManager::class.java)
+    return roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_SMS)
+}

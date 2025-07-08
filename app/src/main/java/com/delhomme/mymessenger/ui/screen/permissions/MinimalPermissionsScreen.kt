@@ -10,6 +10,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,8 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.delhomme.mymessenger.utils.isDefaultSmsApp
 import com.delhomme.mymessenger.utils.requestDefaultSmsApp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -32,92 +35,114 @@ fun MinimalPermissionsScreen(
     onAllGranted: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    /*val permissions = listOf(
+    val permissions = listOf(
         Manifest.permission.READ_SMS,
         Manifest.permission.SEND_SMS,
         Manifest.permission.RECEIVE_SMS,
         Manifest.permission.RECEIVE_MMS,
         Manifest.permission.RECEIVE_WAP_PUSH,
         Manifest.permission.READ_CONTACTS,
-        Manifest.permission.POST_NOTIFICATIONS,
         Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CALL_LOG,
-        Manifest.permission.READ_PHONE_NUMBERS,
-        // WRITE_SMS supprimé (n'existe plus)
-        // BROADCAST_SMS supprimé (permission système)
-        // BROADCAST_WAP_PUSH non demandé (permission protégée)
-    )*/
-
-    // Demande des permissions critiques
-    val criticalPermissions = listOf(
-        Manifest.permission.RECEIVE_SMS,
-        Manifest.permission.RECEIVE_MMS,
-        Manifest.permission.RECEIVE_WAP_PUSH
+        Manifest.permission.POST_NOTIFICATIONS
     )
 
-    val permissionState = rememberMultiplePermissionsState(criticalPermissions)
+    val permissionState = rememberMultiplePermissionsState(permissions)
     val context = LocalContext.current
     val activity = context as? Activity
     var isDefaultSmsApp by remember { mutableStateOf(false) }
+    var hasCheckedOnce by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // ✅ CORRECTION : Vérification immédiate au retour de l'activité
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            // Vérification immédiate quand l'activité reprend
-            val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
-            val newStatus = defaultSmsApp == context.packageName
-            if (newStatus != isDefaultSmsApp) {
-                isDefaultSmsApp = newStatus
-                Log.d("SMS", "SMS default status updated: $isDefaultSmsApp")
-            }
-
-            // Puis vérification continue
-            while (true) {
-                delay(1000)
-                val currentDefaultApp = Telephony.Sms.getDefaultSmsPackage(context)
-                val currentStatus = currentDefaultApp == context.packageName
-                if (currentStatus != isDefaultSmsApp) {
-                    isDefaultSmsApp = currentStatus
-                    Log.d("SMS", "SMS default status updated: $isDefaultSmsApp")
-                    if (isDefaultSmsApp) {
-                        break // Arrêter la boucle si on devient l'app par défaut
-                    }
-                }
-            }
+    val checkSmsStatus = {
+        if (activity != null) {
+            val newStatus = isDefaultSmsApp(activity)
+            Log.d("SMS_STATUS", "SMS status check: $newStatus")
+            isDefaultSmsApp = newStatus
+            hasCheckedOnce = true
+            newStatus
+        } else {
+            false
         }
     }
 
+    // 1. Demande toutes les permissions d'abord
     LaunchedEffect(Unit) {
         if (!permissionState.allPermissionsGranted) {
+            Log.d("SMS_STATUS", "Requesting permissions...")
             permissionState.launchMultiplePermissionRequest()
         }
     }
 
-    if (permissionState.allPermissionsGranted) {
-        if (!isDefaultSmsApp) {
+    // 2. Vérification initiale du statut SMS quand les permissions sont accordées
+    LaunchedEffect(permissionState.allPermissionsGranted) {
+        if (permissionState.allPermissionsGranted && !hasCheckedOnce) {
+            Log.d("SMS_STATUS", "Initial SMS status check")
+            val status = checkSmsStatus()
+            if (status) {
+                Log.d("SMS_STATUS", "Already default SMS app, proceeding")
+            }
+        }
+    }
+
+    // 3. Observer uniquement quand on revient de la sélection d'app SMS
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    // Ne vérifier que si on a déjà demandé à l'utilisateur de changer
+                    if (permissionState.allPermissionsGranted && hasCheckedOnce && !isDefaultSmsApp) {
+                        Log.d("SMS_STATUS", "Returned from SMS selection, checking status")
+                        val newStatus = checkSmsStatus()
+                        if (newStatus) {
+                            Log.d("SMS_STATUS", "Now default SMS app!")
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // 4. Logique d'affichage simplifiée (sans duplication)
+    when {
+        !permissionState.allPermissionsGranted -> {
+            Log.d("SMS_STATUS", "Waiting for permissions")
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("L'application a besoin d'autorisations pour fonctionner.\nVeuillez accepter toutes les permissions.")
+            }
+        }
+
+        !isDefaultSmsApp && hasCheckedOnce -> {
+            Log.d("SMS_STATUS", "Permissions OK, need SMS default status")
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Button(onClick = {
                     if (activity != null) {
-                        Log.d("SMS", "Button clicked, Activity OK")
+                        Log.d("SMS_STATUS", "User requesting SMS default status")
                         Toast.makeText(context, "Sélectionnez votre application dans la liste", Toast.LENGTH_SHORT).show()
                         requestDefaultSmsApp(activity)
                     } else {
-                        Log.e("SMS", "Activity is null!")
+                        Log.e("SMS_STATUS", "Activity is null!")
                         Toast.makeText(context, "Erreur : Activity null", Toast.LENGTH_LONG).show()
                     }
                 }) {
                     Text("Définir comme application SMS par défaut")
                 }
             }
-        } else {
-            Log.d("SMS", "L'application est déjà définie comme SMS par défaut, onAllGranted")
-            onAllGranted()
-            content()
         }
-    } else {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("L'application a besoin d'autorisations pour fonctionner.")
+
+        else -> {
+            // Soit on est déjà l'app par défaut, soit on n'a pas encore vérifié
+            Log.d("SMS_STATUS", "Showing main content")
+            LaunchedEffect(Unit) {
+                onAllGranted()
+            }
+            content()
         }
     }
 }
