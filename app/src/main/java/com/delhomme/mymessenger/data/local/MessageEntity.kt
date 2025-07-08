@@ -11,8 +11,12 @@ data class MessageEntity(
     val body: String,
     val date: Long,
     val isMe: Boolean,
-    val type: String, // "sms" ou "mms"
+    val type: String, // "sms", "mms", 'instant'
     val status: String = "DELIVERED",
     val mediaUri: String? = null,
+    val mediaType: String? = null, // "image", "video", "audio", "file", "gif", "localisation", "contact",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val contactVCard: String? = null,
     val replyToId: Long? = null
 )
