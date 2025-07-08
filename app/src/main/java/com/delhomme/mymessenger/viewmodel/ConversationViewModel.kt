@@ -1,9 +1,9 @@
 package com.delhomme.mymessenger.viewmodel
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 
 @HiltViewModel
 class ConversationViewModel @Inject constructor(
@@ -57,18 +56,20 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-
     fun handleAction(action: ConversationAction, id: Long, context: Context? = null) {
         viewModelScope.launch {
             when (action) {
-                //ConversationAction.Archive -> archiveConversation(id)
-                //ConversationAction.Unarchive -> unarchiveConversation(id)
-                //ConversationAction.Pin -> pinConversation(id)
-                //ConversationAction.Unpin -> unpinConversation(id)
-                //ConversationAction.Mute -> muteConversation(id)
-                //ConversationAction.Unmute -> unmuteConversation(id)
-                //ConversationAction.Block -> blockConversation(id)
-                //ConversationAction.Unblock -> unblockConversation(id)
+                ConversationAction.Archive -> archiveConversation(id)
+                ConversationAction.Unarchive -> unarchiveConversation(id)
+                ConversationAction.Pin -> pinConversation(id)
+                ConversationAction.Unpin -> unpinConversation(id)
+                ConversationAction.Mute -> muteConversation(id)
+                ConversationAction.Unmute -> unmuteConversation(id)
+                ConversationAction.Block -> blockConversation(id)
+                ConversationAction.Unblock -> unblockConversation(id)
+                ConversationAction.Delete -> deleteConversation(id)
+                ConversationAction.MarkAsRead -> markAsRead(id)
+                ConversationAction.MarkAsUnread -> markAsUnread(id)
                 ConversationAction.Call -> {
                     val conversation = repo.getConversationById(id)
                     conversation?.phoneNumber?.let { phoneNumber ->
@@ -81,8 +82,95 @@ class ConversationViewModel @Inject constructor(
                         }
                     }
                 }
-                else -> {/* Ne rien faire */}
             }
+        }
+    }
+
+    private suspend fun archiveConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isArchived = true)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun unarchiveConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isArchived = false)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun pinConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isPinned = true)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun unpinConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isPinned = false)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun muteConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isMuted = true)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun unmuteConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isMuted = false)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun blockConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isBlocked = true)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun unblockConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isBlocked = false)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun deleteConversation(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(isDeleted = true)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun markAsRead(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(unreadCount = 0)
+            repo.updateConversation(updated)
+        }
+    }
+
+    private suspend fun markAsUnread(id: Long) {
+        val conversation = repo.getConversationById(id)
+        conversation?.let {
+            val updated = it.copy(unreadCount = if (it.unreadCount == 0) 1 else it.unreadCount)
+            repo.updateConversation(updated)
         }
     }
 
@@ -101,11 +189,9 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-
     fun initializeConversations(context: Context) {
         viewModelScope.launch {
             repo.initializeConversations(context)
         }
     }
-
 }

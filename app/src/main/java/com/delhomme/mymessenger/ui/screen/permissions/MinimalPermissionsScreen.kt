@@ -2,29 +2,18 @@ package com.delhomme.mymessenger.ui.screen.permissions
 
 import android.Manifest
 import android.app.Activity
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import android.provider.Telephony
-import android.util.Log
-import android.widget.Toast
-import androidx.compose.material3.Button
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.delhomme.mymessenger.utils.isDefaultSmsApp
 import com.delhomme.mymessenger.utils.requestDefaultSmsApp
+import com.delhomme.mymessenger.utils.isDefaultSmsApp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.delay
@@ -35,113 +24,197 @@ fun MinimalPermissionsScreen(
     onAllGranted: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val permissions = listOf(
-        Manifest.permission.READ_SMS,
-        Manifest.permission.SEND_SMS,
+    // Demande des permissions critiques
+    val criticalPermissions = listOf(
         Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.SEND_SMS,
+        Manifest.permission.READ_SMS,
         Manifest.permission.RECEIVE_MMS,
-        Manifest.permission.RECEIVE_WAP_PUSH,
         Manifest.permission.READ_CONTACTS,
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.READ_PHONE_STATE
     )
 
-    val permissionState = rememberMultiplePermissionsState(permissions)
+    val permissionState = rememberMultiplePermissionsState(criticalPermissions)
     val context = LocalContext.current
     val activity = context as? Activity
-    var isDefaultSmsApp by remember { mutableStateOf(false) }
-    var hasCheckedOnce by remember { mutableStateOf(false) }
+    var isDefaultSmsApp by remember { mutableStateOf(isDefaultSmsApp(context)) }
+    var isCheckingPermissions by remember { mutableStateOf(true) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val checkSmsStatus = {
-        if (activity != null) {
-            val newStatus = isDefaultSmsApp(activity)
-            Log.d("SMS_STATUS", "SMS status check: $newStatus")
-            isDefaultSmsApp = newStatus
-            hasCheckedOnce = true
-            newStatus
-        } else {
-            false
+    // Vérification continue du statut de l'application SMS par défaut
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                val currentStatus = isDefaultSmsApp(context)
+                if (currentStatus != isDefaultSmsApp) {
+                    isDefaultSmsApp = currentStatus
+                }
+                delay(1000)
+
+                // Arrêter la vérification si on devient l'app par défaut
+                if (isDefaultSmsApp) break
+            }
         }
     }
 
-    // 1. Demande toutes les permissions d'abord
+    // Vérification initiale des permissions
     LaunchedEffect(Unit) {
+        delay(500) // Petit délai pour l'initialisation
+        isCheckingPermissions = false
+
         if (!permissionState.allPermissionsGranted) {
-            Log.d("SMS_STATUS", "Requesting permissions...")
             permissionState.launchMultiplePermissionRequest()
         }
     }
 
-    // 2. Vérification initiale du statut SMS quand les permissions sont accordées
-    LaunchedEffect(permissionState.allPermissionsGranted) {
-        if (permissionState.allPermissionsGranted && !hasCheckedOnce) {
-            Log.d("SMS_STATUS", "Initial SMS status check")
-            val status = checkSmsStatus()
-            if (status) {
-                Log.d("SMS_STATUS", "Already default SMS app, proceeding")
+    when {
+        isCheckingPermissions -> {
+            // État de vérification initial
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = "Vérification des permissions...",
+                        modifier = Modifier.padding(top = 16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
-    }
 
-    // 3. Observer uniquement quand on revient de la sélection d'app SMS
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> {
-                    // Ne vérifier que si on a déjà demandé à l'utilisateur de changer
-                    if (permissionState.allPermissionsGranted && hasCheckedOnce && !isDefaultSmsApp) {
-                        Log.d("SMS_STATUS", "Returned from SMS selection, checking status")
-                        val newStatus = checkSmsStatus()
-                        if (newStatus) {
-                            Log.d("SMS_STATUS", "Now default SMS app!")
+        !permissionState.allPermissionsGranted -> {
+            // Permissions manquantes
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(
+                                com.delhomme.mymessenger.R.drawable.ic_message
+                            ),
+                            contentDescription = "Permissions",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+
+                        Text(
+                            text = "Permissions requises",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+
+                        Text(
+                            text = "L'application a besoin des permissions suivantes pour fonctionner :",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier.padding(top = 16.dp)
+                        ) {
+                            listOf(
+                                "📱 Lire et envoyer des SMS",
+                                "📧 Recevoir des SMS et MMS",
+                                "👥 Accéder aux contacts",
+                                "📞 État du téléphone"
+                            ).forEach { permission ->
+                                Text(
+                                    text = permission,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                permissionState.launchMultiplePermissionRequest()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp)
+                        ) {
+                            Text("Accorder les permissions")
                         }
                     }
                 }
-                else -> {}
             }
         }
 
-        lifecycleOwner.lifecycle.addObserver(observer)
+        !isDefaultSmsApp -> {
+            // Application SMS par défaut manquante
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(
+                                com.delhomme.mymessenger.R.drawable.ic_sms
+                            ),
+                            contentDescription = "SMS App",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
 
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
+                        Text(
+                            text = "Application SMS par défaut",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
 
-    // 4. Logique d'affichage simplifiée (sans duplication)
-    when {
-        !permissionState.allPermissionsGranted -> {
-            Log.d("SMS_STATUS", "Waiting for permissions")
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("L'application a besoin d'autorisations pour fonctionner.\nVeuillez accepter toutes les permissions.")
-            }
-        }
+                        Text(
+                            text = "Pour recevoir et envoyer des SMS, cette application doit être définie comme application SMS par défaut.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
 
-        !isDefaultSmsApp && hasCheckedOnce -> {
-            Log.d("SMS_STATUS", "Permissions OK, need SMS default status")
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Button(onClick = {
-                    if (activity != null) {
-                        Log.d("SMS_STATUS", "User requesting SMS default status")
-                        Toast.makeText(context, "Sélectionnez votre application dans la liste", Toast.LENGTH_SHORT).show()
-                        requestDefaultSmsApp(activity)
-                    } else {
-                        Log.e("SMS_STATUS", "Activity is null!")
-                        Toast.makeText(context, "Erreur : Activity null", Toast.LENGTH_LONG).show()
+                        Button(
+                            onClick = {
+                                activity?.let { requestDefaultSmsApp(it) }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp)
+                        ) {
+                            Text("Définir comme application par défaut")
+                        }
+
+                        TextButton(
+                            onClick = {
+                                // Forcer la vérification
+                                isDefaultSmsApp = isDefaultSmsApp(context)
+                            },
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            Text("Vérifier à nouveau")
+                        }
                     }
-                }) {
-                    Text("Définir comme application SMS par défaut")
                 }
             }
         }
 
         else -> {
-            // Soit on est déjà l'app par défaut, soit on n'a pas encore vérifié
-            Log.d("SMS_STATUS", "Showing main content")
-            LaunchedEffect(Unit) {
-                onAllGranted()
-            }
+            // Tout est en ordre, afficher le contenu
+            onAllGranted()
             content()
         }
     }

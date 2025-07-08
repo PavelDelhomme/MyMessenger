@@ -25,6 +25,12 @@ fun requestDefaultSmsApp(activity: Activity) {
 }
 
 fun isDefaultSmsApp(context: Context): Boolean {
-    val roleManager = context.getSystemService(RoleManager::class.java)
-    return roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_SMS)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_SMS)
+    } else {
+        // Pour les versions antérieures à Android 10
+        val defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context)
+        defaultSmsApp == context.packageName
+    }
 }

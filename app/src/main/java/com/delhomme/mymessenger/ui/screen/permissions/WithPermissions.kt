@@ -12,7 +12,7 @@ import androidx.core.content.ContextCompat
 @Composable
 fun WithPermission(
     permission: String,
-    onAction: () -> Unit,
+    onAction: @Composable () -> Unit,
     onPermissionDenied: () -> Unit = {},
     content: @Composable (requestPermission: () -> Unit) -> Unit
 ) {
