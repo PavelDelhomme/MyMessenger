@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 
 @Database(
     entities = [MessageEntity::class, ConversationEntity::class],
-    version = 7,                 // incrémentez à chaque changement de schéma
+    version = 8,                 // incrémentez à chaque changement de schéma
     exportSchema = false         // inutile si vous ne conservez pas de schémas
 )
 abstract class AppDatabase : RoomDatabase() {

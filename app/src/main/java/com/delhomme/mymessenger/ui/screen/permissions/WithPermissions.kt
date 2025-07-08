@@ -21,25 +21,16 @@ fun WithPermission(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
-            if (granted) {
-                onAction()
-            } else {
-                onPermissionDenied()
-            }
+            if (granted) onAction() else onPermissionDenied()
         }
     )
 
     val requestPermission = remember {
         {
-            when (ContextCompat.checkSelfPermission(context, permission)) {
-                PackageManager.PERMISSION_GRANTED -> {
-                    // Permission déjà accordée
-                    onAction()
-                }
-                else -> {
-                    // Demander la permission
-                    launcher.launch(permission)
-                }
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                onAction()
+            } else {
+                launcher.launch(permission)
             }
         }
     }
