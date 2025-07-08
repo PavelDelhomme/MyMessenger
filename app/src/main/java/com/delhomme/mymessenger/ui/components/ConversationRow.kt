@@ -130,6 +130,7 @@ fun ConversationRow(
                         .background(background)
                         .clickable { requestPermission() }
                         .padding(8.dp)
+                        .padding(top = 25.dp)
                         .height(48.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
